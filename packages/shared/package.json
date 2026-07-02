@@ -1,0 +1,32 @@
+{
+  "name": "@mb/shared",
+  "version": "1.0.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "require": "./dist/index.js",
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./schemas/*": {
+      "require": "./dist/schemas/*.js",
+      "import": "./dist/schemas/*.js",
+      "types": "./dist/schemas/*.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format --write ."
+  },
+  "dependencies": {
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.1",
+    "typescript": "^6.0.3"
+  }
+}

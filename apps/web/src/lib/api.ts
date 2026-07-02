@@ -1,0 +1,103 @@
+import axios from 'axios'
+import { useAuthStore } from '@/store/auth-store'
+import { env } from './env'
+
+export const api = axios.create({
+  baseURL: env.VITE_API_BASE_URL,
+  timeout: 15000,
+  withCredentials: true, // refresh token 走 httpOnly cookie
+  headers: {
+    'Content-Type': 'application/json',
+  },
+})
+
+let isRefreshing = false
+let failedQueue: Array<{
+  resolve: (value: unknown) => void
+  reject: (reason?: unknown) => void
+}> = []
+
+const processQueue = (error: unknown, token: string | null) => {
+  failedQueue.forEach(({ resolve, reject }) => {
+    if (error) {
+      reject(error)
+    } else {
+      resolve(token)
+    }
+  })
+  failedQueue = []
+}
+
+api.interceptors.request.use(
+  (config) => {
+    const token = useAuthStore.getState().token
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
+    }
+    return config
+  },
+  (error) => Promise.reject(error),
+)
+
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config as typeof error.config & { _retry?: boolean }
+
+    if (
+      error.response?.status === 401 &&
+      !originalRequest._retry &&
+      !originalRequest.url?.includes('/api/v1/auth/refresh')
+    ) {
+      if (isRefreshing) {
+        // 排队等待 refresh 完成，加 15s 超时避免永久挂起
+        return new Promise((resolve, reject) => {
+          const timer = setTimeout(() => {
+            reject(new Error('Refresh token timeout'))
+          }, 15000)
+          failedQueue.push({
+            resolve: (v) => {
+              clearTimeout(timer)
+              resolve(v)
+            },
+            reject: (e) => {
+              clearTimeout(timer)
+              reject(e)
+            },
+          })
+        }).then((token) => {
+          originalRequest.headers.Authorization = `Bearer ${token}`
+          return api(originalRequest)
+        })
+      }
+
+      originalRequest._retry = true
+      isRefreshing = true
+
+      try {
+        // refreshToken 走 httpOnly cookie，无需手动传参
+        const response = await axios.post(
+          `${env.VITE_API_BASE_URL}/api/v1/auth/refresh`,
+          {},
+          { withCredentials: true },
+        )
+        const { accessToken } = response.data.data
+
+        useAuthStore.getState().setToken(accessToken)
+        processQueue(null, accessToken)
+
+        originalRequest.headers.Authorization = `Bearer ${accessToken}`
+        return api(originalRequest)
+      } catch (refreshError) {
+        processQueue(refreshError, null)
+        useAuthStore.getState().logout()
+        window.location.href = '/login'
+        return Promise.reject(refreshError)
+      } finally {
+        isRefreshing = false
+      }
+    }
+
+    return Promise.reject(error)
+  },
+)
