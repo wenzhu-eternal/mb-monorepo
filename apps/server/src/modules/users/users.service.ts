@@ -1,4 +1,5 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common'
+import { ErrorCodes, ErrorMessages } from '@shared/constants/errors'
 import * as argon2 from 'argon2'
 import { desc, eq, sql } from 'drizzle-orm'
 import { db } from '@/db'
@@ -75,7 +76,7 @@ export class UsersService {
     })
 
     if (!user) {
-      throw new NotFoundException(`用户 ID ${id} 不存在`)
+      throw new NotFoundException(ErrorMessages[ErrorCodes.USER_NOT_FOUND])
     }
 
     const { password: _, ...userWithoutPassword } = user
@@ -94,7 +95,7 @@ export class UsersService {
     })
 
     if (existingUsername) {
-      throw new ConflictException('用户名已存在')
+      throw new ConflictException(ErrorMessages[ErrorCodes.USER_ALREADY_EXISTS])
     }
 
     const existingEmail = await db.query.users.findFirst({
@@ -102,7 +103,7 @@ export class UsersService {
     })
 
     if (existingEmail) {
-      throw new ConflictException('邮箱已存在')
+      throw new ConflictException(ErrorMessages[ErrorCodes.USER_ALREADY_EXISTS])
     }
 
     const hashedPassword = await argon2.hash(data.password)
@@ -117,7 +118,7 @@ export class UsersService {
         .returning()
 
       if (!newUser) {
-        throw new ConflictException('创建用户失败')
+        throw new ConflictException(ErrorMessages[ErrorCodes.OPERATION_FAILED])
       }
 
       const { password: _, ...userWithoutPassword } = newUser
@@ -125,7 +126,7 @@ export class UsersService {
     } catch (error) {
       // TOCTOU 兜底: 并发场景下唯一约束冲突转 409
       if (isUniqueViolation(error)) {
-        throw new ConflictException('用户名或邮箱已存在')
+        throw new ConflictException(ErrorMessages[ErrorCodes.USER_ALREADY_EXISTS])
       }
       throw error
     }
@@ -147,7 +148,7 @@ export class UsersService {
     })
 
     if (!existingUser) {
-      throw new NotFoundException(`用户 ID ${id} 不存在`)
+      throw new NotFoundException(ErrorMessages[ErrorCodes.USER_NOT_FOUND])
     }
 
     // email 唯一性校验（排除自身）
@@ -156,7 +157,7 @@ export class UsersService {
         where: eq(users.email, data.email),
       })
       if (duplicateEmail) {
-        throw new ConflictException('邮箱已存在')
+        throw new ConflictException(ErrorMessages[ErrorCodes.USER_ALREADY_EXISTS])
       }
     }
 
@@ -174,7 +175,7 @@ export class UsersService {
         .returning()
 
       if (!updatedUser) {
-        throw new NotFoundException(`更新用户 ID ${id} 失败`)
+        throw new NotFoundException(ErrorMessages[ErrorCodes.OPERATION_FAILED])
       }
 
       const { password: _, ...userWithoutPassword } = updatedUser
@@ -182,7 +183,7 @@ export class UsersService {
     } catch (error) {
       // TOCTOU 兜底: 并发场景下 email 唯一约束冲突转 409
       if (isUniqueViolation(error)) {
-        throw new ConflictException('邮箱已被占用')
+        throw new ConflictException(ErrorMessages[ErrorCodes.USER_ALREADY_EXISTS])
       }
       throw error
     } finally {
@@ -197,7 +198,7 @@ export class UsersService {
     })
 
     if (!existingUser) {
-      throw new NotFoundException(`用户 ID ${id} 不存在`)
+      throw new NotFoundException(ErrorMessages[ErrorCodes.USER_NOT_FOUND])
     }
 
     await db.delete(users).where(eq(users.id, id))

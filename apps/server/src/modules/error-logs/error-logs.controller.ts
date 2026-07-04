@@ -114,10 +114,7 @@ export class ErrorLogsController {
   @Roles('admin')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '标记错误已处理（仅管理员）' })
-  async resolve(
-    @Param('id', ParseIntPipe) id: number,
-    @CurrentUser() user: { sub: number },
-  ) {
+  async resolve(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: { sub: number }) {
     return this.errorLogsService.resolve(id, user.sub)
   }
 

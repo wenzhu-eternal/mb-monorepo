@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { JwtService } from '@nestjs/jwt'
+import { ErrorCodes, ErrorMessages } from '@shared/constants/errors'
 import * as argon2 from 'argon2'
 import { eq } from 'drizzle-orm'
 import { db } from '@/db'
@@ -40,17 +41,17 @@ export class AuthService {
     })
 
     if (!user) {
-      throw new UnauthorizedException('用户名或密码错误')
+      throw new UnauthorizedException(ErrorMessages[ErrorCodes.INVALID_PASSWORD])
     }
 
     const isPasswordValid = await argon2.verify(user.password, password)
     if (!isPasswordValid) {
-      throw new UnauthorizedException('用户名或密码错误')
+      throw new UnauthorizedException(ErrorMessages[ErrorCodes.INVALID_PASSWORD])
     }
 
     // 禁用用户禁止登录
     if (user.status === false) {
-      throw new UnauthorizedException('账号已被禁用，请联系管理员')
+      throw new UnauthorizedException(ErrorMessages[ErrorCodes.USER_DISABLED])
     }
 
     const tokens = await this.signTokenPair({
@@ -67,7 +68,9 @@ export class AuthService {
 
     return {
       ...tokens,
-      user: { ...userWithoutPassword, permissions } as Omit<User, 'password'> & { permissions: string[] },
+      user: { ...userWithoutPassword, permissions } as Omit<User, 'password'> & {
+        permissions: string[]
+      },
     }
   }
 
@@ -77,13 +80,13 @@ export class AuthService {
       const secret = this.configService.get<string>('JWT_REFRESH_SECRET')
       payload = await this.jwtService.verifyAsync(refreshToken, { secret })
     } catch {
-      throw new UnauthorizedException('刷新令牌无效')
+      throw new UnauthorizedException(ErrorMessages[ErrorCodes.REFRESH_TOKEN_INVALID])
     }
 
     // 校验 Redis 中存在该 token（已 logout 则不存在，实现真正吊销）
     const stored = await this.redisService.get(`refresh:${payload.sub}:${payload.jti}`)
     if (stored !== '1') {
-      throw new UnauthorizedException('刷新令牌已被吊销')
+      throw new UnauthorizedException(ErrorMessages[ErrorCodes.INVALID_TOKEN])
     }
 
     const user = await db.query.users.findFirst({
@@ -91,7 +94,7 @@ export class AuthService {
     })
 
     if (!user) {
-      throw new UnauthorizedException('用户不存在')
+      throw new UnauthorizedException(ErrorMessages[ErrorCodes.USER_NOT_FOUND])
     }
 
     // 旧 token 立即作废（防重放）
@@ -123,7 +126,7 @@ export class AuthService {
     })
 
     if (!user) {
-      throw new UnauthorizedException('用户不存在')
+      throw new UnauthorizedException(ErrorMessages[ErrorCodes.USER_NOT_FOUND])
     }
 
     const permissions = await this.getPermissionsByUserId(userId)
@@ -142,7 +145,7 @@ export class AuthService {
     })
 
     if (existingUser) {
-      throw new ConflictException('用户名已存在')
+      throw new ConflictException(ErrorMessages[ErrorCodes.USER_ALREADY_EXISTS])
     }
 
     const existingEmail = await db.query.users.findFirst({
@@ -150,7 +153,7 @@ export class AuthService {
     })
 
     if (existingEmail) {
-      throw new ConflictException('邮箱已存在')
+      throw new ConflictException(ErrorMessages[ErrorCodes.USER_ALREADY_EXISTS])
     }
 
     const hashedPassword = await argon2.hash(password)
@@ -166,7 +169,7 @@ export class AuthService {
       .returning()
 
     if (!newUser) {
-      throw new ConflictException('创建用户失败')
+      throw new ConflictException(ErrorMessages[ErrorCodes.OPERATION_FAILED])
     }
 
     const { password: _, ...userWithoutPassword } = newUser

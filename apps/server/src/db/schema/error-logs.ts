@@ -1,4 +1,13 @@
-import { boolean, integer, jsonb, pgTable, serial, text, timestamp, varchar } from 'drizzle-orm/pg-core'
+import {
+  boolean,
+  integer,
+  jsonb,
+  pgTable,
+  serial,
+  text,
+  timestamp,
+  varchar,
+} from 'drizzle-orm/pg-core'
 
 export const errorLogs = pgTable('error_logs', {
   id: serial('id').primaryKey(),

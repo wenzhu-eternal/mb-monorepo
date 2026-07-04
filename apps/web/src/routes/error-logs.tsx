@@ -9,9 +9,9 @@ import {
   Form,
   Input,
   Modal,
-  Row,
   message,
   Popconfirm,
+  Row,
   Select,
   Space,
   Statistic,
@@ -126,9 +126,7 @@ function LogsTab() {
       title: '状态',
       dataIndex: 'isResolved',
       width: 80,
-      render: (v: boolean) => (
-        <Tag color={v ? 'green' : 'error'}>{v ? '已处理' : '未处理'}</Tag>
-      ),
+      render: (v: boolean) => <Tag color={v ? 'green' : 'error'}>{v ? '已处理' : '未处理'}</Tag>,
     },
     {
       title: '消息',
@@ -195,7 +193,11 @@ function LogsTab() {
           </Col>
           <Col span={6}>
             <Card>
-              <Statistic title="未处理" value={stats.unresolved} valueStyle={{ color: '#cf1322' }} />
+              <Statistic
+                title="未处理"
+                value={stats.unresolved}
+                valueStyle={{ color: '#cf1322' }}
+              />
             </Card>
           </Col>
           <Col span={6}>

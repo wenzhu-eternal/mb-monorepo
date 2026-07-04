@@ -1,9 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common'
-import { ConfigService } from '@nestjs/config'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { createTransport, type Transporter } from 'nodemailer'
+import { Injectable, Logger } from '@nestjs/common'
+import { ConfigService } from '@nestjs/config'
 import Handlebars from 'handlebars'
+import { createTransport, type Transporter } from 'nodemailer'
 
 @Injectable()
 export class MailService {
@@ -56,7 +56,11 @@ export class MailService {
     if (template) {
       await this.sendHtml(to, '欢迎注册 MB Admin', template({ name: username }))
     } else {
-      await this.send(to, '欢迎注册 MB Admin', `你好，${username}！欢迎注册 MB Admin 系统管理后台。`)
+      await this.send(
+        to,
+        '欢迎注册 MB Admin',
+        `你好，${username}！欢迎注册 MB Admin 系统管理后台。`,
+      )
     }
   }
 
@@ -66,7 +70,11 @@ export class MailService {
   async sendVerificationCode(to: string, code: string, name?: string): Promise<void> {
     const template = this.templates.get('verification')
     if (template) {
-      await this.sendHtml(to, '【MB Admin】验证码', template({ name: name ?? '用户', code, expireMinutes: 5 }))
+      await this.sendHtml(
+        to,
+        '【MB Admin】验证码',
+        template({ name: name ?? '用户', code, expireMinutes: 5 }),
+      )
     } else {
       await this.send(
         to,
@@ -79,14 +87,21 @@ export class MailService {
   /**
    * 发送备份通知邮件（HTML 模板）
    */
-  async sendBackupNotification(success: boolean, detail: string, backupDate?: string): Promise<void> {
+  async sendBackupNotification(
+    success: boolean,
+    detail: string,
+    backupDate?: string,
+  ): Promise<void> {
     const subject = success ? '【MB Admin】数据库备份成功' : '【MB Admin】数据库备份失败'
     const template = this.templates.get('backup')
     if (template) {
       await this.sendHtml(
         this.fromAddress,
         subject,
-        template({ name: '管理员', backupDate: backupDate ?? new Date().toLocaleDateString('zh-CN') }),
+        template({
+          name: '管理员',
+          backupDate: backupDate ?? new Date().toLocaleDateString('zh-CN'),
+        }),
       )
     } else {
       const status = success ? '成功' : '失败'

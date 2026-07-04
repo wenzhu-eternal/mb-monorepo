@@ -37,8 +37,8 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/apps/server/node_modules ./apps/server/node_modules
 COPY --from=builder /app/packages/shared/node_modules ./packages/shared/node_modules
 
-ENV API_PORT=9000
-EXPOSE 9000
+ENV API_PORT=80
+EXPOSE 80
 
 ENTRYPOINT ["/sbin/tini", "--"]
 CMD ["node", "apps/server/dist/main.js"]

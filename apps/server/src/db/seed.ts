@@ -30,13 +30,21 @@ async function seed() {
   console.log('Admin role ready:', role)
 
   const adminPermissions = [
-    'user:view', 'user:create', 'user:update', 'user:delete',
-    'role:view', 'role:create', 'role:update', 'role:delete',
-    'file:view', 'file:upload',
+    'user:view',
+    'user:create',
+    'user:update',
+    'user:delete',
+    'role:view',
+    'role:create',
+    'role:update',
+    'role:delete',
+    'file:view',
+    'file:upload',
   ]
-  await db.insert(rolePermissions).values(
-    adminPermissions.map((permission) => ({ roleId: role.id, permission })),
-  ).onConflictDoNothing()
+  await db
+    .insert(rolePermissions)
+    .values(adminPermissions.map((permission) => ({ roleId: role.id, permission })))
+    .onConflictDoNothing()
   console.log('Seeded admin permissions:', adminPermissions)
 
   // Create default admin user (idempotent)

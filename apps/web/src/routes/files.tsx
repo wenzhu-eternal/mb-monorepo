@@ -1,5 +1,5 @@
-import { createFileRoute } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
+import { createFileRoute } from '@tanstack/react-router'
 import type { UploadProps } from 'antd'
 import {
   Alert,
@@ -24,8 +24,8 @@ import {
   useDeleteFile,
   useFiles,
 } from '@/hooks/use-files'
-import { api } from '@/lib/api'
 import { AuthenticatedLayout } from '@/layouts/authenticated-layout'
+import { api } from '@/lib/api'
 
 const { Title, Text } = Typography
 
