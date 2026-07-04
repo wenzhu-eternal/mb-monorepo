@@ -39,16 +39,37 @@ export const useAuditLogs = (params: LogQuery) => {
 // 错误日志
 export interface ErrorLog {
   id: number
+  source: string
+  errorType: string | null
   message: string
   stack: string | null
+  file: string | null
+  line: number | null
+  column: number | null
+  url: string | null
+  method: string | null
+  statusCode: number | null
   context: unknown
   userId: number | null
   ip: string | null
   userAgent: string | null
+  isResolved: boolean
+  resolvedAt: string | null
+  resolvedBy: number | null
   createdAt: string
 }
 
-export type ErrorLogQuery = LogQuery
+export interface ErrorStats {
+  total: number
+  unresolved: number
+  bySource: Record<string, number>
+  byType: Record<string, number>
+}
+
+export interface ErrorLogQuery extends LogQuery {
+  source?: string
+  isResolved?: string
+}
 
 export const useErrorLogs = (params: ErrorLogQuery) => {
   return useQuery({
@@ -63,6 +84,29 @@ export const useErrorLogs = (params: ErrorLogQuery) => {
   })
 }
 
+export const useErrorStats = () => {
+  return useQuery({
+    queryKey: ['error-stats'],
+    queryFn: async () => {
+      const response = await api.get<ApiResponse<ErrorStats>>('/api/v1/error-logs/stats')
+      return response.data.data!
+    },
+  })
+}
+
+export const useResolveErrorLog = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: number) => {
+      await api.post(`/api/v1/error-logs/${id}/resolve`)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['error-logs'] })
+      queryClient.invalidateQueries({ queryKey: ['error-stats'] })
+    },
+  })
+}
+
 export const useDeleteErrorLog = () => {
   const queryClient = useQueryClient()
   return useMutation({
@@ -71,6 +115,86 @@ export const useDeleteErrorLog = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['error-logs'] })
+    },
+  })
+}
+
+// ===== 错误日志白名单 =====
+
+export interface ErrorWhitelist {
+  id: number
+  pattern: string
+  matchType: 'message' | 'url'
+  description: string | null
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CreateWhitelistInput {
+  pattern: string
+  matchType: 'message' | 'url'
+  description?: string
+  isActive?: boolean
+}
+
+export interface UpdateWhitelistInput {
+  pattern?: string
+  matchType?: 'message' | 'url'
+  description?: string
+  isActive?: boolean
+}
+
+export const useWhitelist = () => {
+  return useQuery({
+    queryKey: ['error-whitelist'],
+    queryFn: async () => {
+      const response = await api.get<ApiResponse<ErrorWhitelist[]>>('/api/v1/error-logs/whitelist')
+      return response.data.data!
+    },
+  })
+}
+
+export const useCreateWhitelist = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (data: CreateWhitelistInput) => {
+      const response = await api.post<ApiResponse<ErrorWhitelist>>(
+        '/api/v1/error-logs/whitelist',
+        data,
+      )
+      return response.data.data!
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['error-whitelist'] })
+    },
+  })
+}
+
+export const useUpdateWhitelist = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: UpdateWhitelistInput }) => {
+      const response = await api.patch<ApiResponse<ErrorWhitelist>>(
+        `/api/v1/error-logs/whitelist/${id}`,
+        data,
+      )
+      return response.data.data!
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['error-whitelist'] })
+    },
+  })
+}
+
+export const useDeleteWhitelist = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: number) => {
+      await api.delete(`/api/v1/error-logs/whitelist/${id}`)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['error-whitelist'] })
     },
   })
 }
@@ -88,10 +212,9 @@ export const useRoles = (params: LogQuery) => {
   return useQuery({
     queryKey: ['roles', params],
     queryFn: async () => {
-      const response = await api.get<ApiResponse<PaginatedResponse<Role>>>(
-        '/api/v1/roles',
-        { params },
-      )
+      const response = await api.get<ApiResponse<PaginatedResponse<Role>>>('/api/v1/roles', {
+        params,
+      })
       return response.data.data!
     },
   })

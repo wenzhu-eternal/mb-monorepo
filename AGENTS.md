@@ -96,7 +96,6 @@ docker compose up redis     # 只启动 Redis
 
 ## 参考文档
 
-- [重构计划](./docs/REFACTOR_PLAN.md)
 - [架构设计](./docs/ARCHITECTURE.md)
 - [antd v6 迁移指南](https://ant.design/docs/react/migration-v6/)
 - [Drizzle ORM 文档](https://orm.drizzle.team/docs)

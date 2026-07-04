@@ -14,9 +14,9 @@ import {
   UseGuards,
 } from '@nestjs/common'
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger'
-import { AuthGuard } from '@/modules/auth/auth.guard'
-import { RolesGuard } from '@/common/guards/roles.guard'
 import { Roles } from '@/common/decorators/roles.decorator'
+import { RolesGuard } from '@/common/guards/roles.guard'
+import { AuthGuard } from '@/modules/auth/auth.guard'
 import { CreateRoleDto } from './dto/create-role.dto'
 import { UpdateRoleDto } from './dto/update-role.dto'
 import { RolesService } from './roles.service'

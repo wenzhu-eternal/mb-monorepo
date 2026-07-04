@@ -1,4 +1,4 @@
-import type { ApiResponse, Login, User } from '@shared'
+import type { ApiResponse, Login, User, WechatLoginType } from '@shared'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { api } from '@/lib/api'
@@ -7,6 +7,16 @@ import { useAuthStore } from '@/store/auth-store'
 interface LoginResponse {
   accessToken: string
   user: User
+}
+
+interface WechatQrCodeResponse {
+  qrCodeUrl: string
+  state: string
+  expiresIn: number
+}
+
+interface WechatStatusResponse {
+  enabled: boolean
 }
 
 export const useLogin = () => {
@@ -60,6 +70,41 @@ export const useCurrentUser = () => {
   }, [query.data, setUser])
 
   return query
+}
+
+/** 查询微信登录是否启用 */
+export const useWechatStatus = () =>
+  useQuery({
+    queryKey: ['wechat', 'status'],
+    queryFn: async () => {
+      const response = await api.get<ApiResponse<WechatStatusResponse>>('/api/v1/wechat/status')
+      return response.data.data!
+    },
+    retry: false,
+  })
+
+/** 获取微信扫码登录二维码 */
+export const useWechatQrCode = () =>
+  useMutation({
+    mutationFn: async () => {
+      const response = await api.get<ApiResponse<WechatQrCodeResponse>>('/api/v1/wechat/qrcode')
+      return response.data.data!
+    },
+  })
+
+/** 微信登录（扫码 code 或小程序 code） */
+export const useWechatLogin = () => {
+  const { login } = useAuthStore()
+
+  return useMutation({
+    mutationFn: async (data: { code: string; loginType: WechatLoginType }) => {
+      const response = await api.post<ApiResponse<LoginResponse>>('/api/v1/wechat/login', data)
+      return response.data.data!
+    },
+    onSuccess: (data) => {
+      login(data.user, data.accessToken)
+    },
+  })
 }
 
 export const useAuth = () => {

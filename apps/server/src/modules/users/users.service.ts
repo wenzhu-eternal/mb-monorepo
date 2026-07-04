@@ -4,6 +4,8 @@ import { desc, eq, sql } from 'drizzle-orm'
 import { db } from '@/db'
 import type { User } from '@/db/schema'
 import { users } from '@/db/schema'
+import { Cacheable } from '@/modules/cache/cache.decorator'
+import { CacheService } from '@/modules/cache/cache.service'
 
 // PostgreSQL 唯一约束违反错误码
 function isUniqueViolation(error: unknown): boolean {
@@ -25,6 +27,8 @@ export interface PaginatedUsers {
 
 @Injectable()
 export class UsersService {
+  constructor(private readonly cacheService: CacheService) {}
+
   async findAll(page = 1, pageSize = 10): Promise<PaginatedUsers> {
     const safePage = Math.max(1, page)
     const safePageSize = Math.min(Math.max(1, pageSize), 100)
@@ -55,10 +59,7 @@ export class UsersService {
     // 使用聚合查询避免全表扫描，正确统计超过 100 人场景
     const [totalResult, activeResult] = await Promise.all([
       db.select({ count: sql<number>`count(*)::int` }).from(users),
-      db
-        .select({ count: sql<number>`count(*)::int` })
-        .from(users)
-        .where(eq(users.status, true)),
+      db.select({ count: sql<number>`count(*)::int` }).from(users).where(eq(users.status, true)),
     ])
 
     return {
@@ -67,13 +68,14 @@ export class UsersService {
     }
   }
 
+  @Cacheable('user:id', 300)
   async findById(id: number): Promise<Omit<User, 'password'>> {
     const user = await db.query.users.findFirst({
       where: eq(users.id, id),
     })
 
     if (!user) {
-      throw new NotFoundException(`User with ID ${id} not found`)
+      throw new NotFoundException(`用户 ID ${id} 不存在`)
     }
 
     const { password: _, ...userWithoutPassword } = user
@@ -92,7 +94,7 @@ export class UsersService {
     })
 
     if (existingUsername) {
-      throw new ConflictException('Username already exists')
+      throw new ConflictException('用户名已存在')
     }
 
     const existingEmail = await db.query.users.findFirst({
@@ -100,7 +102,7 @@ export class UsersService {
     })
 
     if (existingEmail) {
-      throw new ConflictException('Email already exists')
+      throw new ConflictException('邮箱已存在')
     }
 
     const hashedPassword = await argon2.hash(data.password)
@@ -115,7 +117,7 @@ export class UsersService {
         .returning()
 
       if (!newUser) {
-        throw new ConflictException('Failed to create user')
+        throw new ConflictException('创建用户失败')
       }
 
       const { password: _, ...userWithoutPassword } = newUser
@@ -145,7 +147,7 @@ export class UsersService {
     })
 
     if (!existingUser) {
-      throw new NotFoundException(`User with ID ${id} not found`)
+      throw new NotFoundException(`用户 ID ${id} 不存在`)
     }
 
     // email 唯一性校验（排除自身）
@@ -154,7 +156,7 @@ export class UsersService {
         where: eq(users.email, data.email),
       })
       if (duplicateEmail) {
-        throw new ConflictException('Email already exists')
+        throw new ConflictException('邮箱已存在')
       }
     }
 
@@ -172,7 +174,7 @@ export class UsersService {
         .returning()
 
       if (!updatedUser) {
-        throw new NotFoundException(`Failed to update user with ID ${id}`)
+        throw new NotFoundException(`更新用户 ID ${id} 失败`)
       }
 
       const { password: _, ...userWithoutPassword } = updatedUser
@@ -183,6 +185,9 @@ export class UsersService {
         throw new ConflictException('邮箱已被占用')
       }
       throw error
+    } finally {
+      // 更新后清缓存（按 pattern 删除该用户的所有缓存变体）
+      await this.cacheService.delByPattern(`cache:user:*${id}*`)
     }
   }
 
@@ -192,11 +197,14 @@ export class UsersService {
     })
 
     if (!existingUser) {
-      throw new NotFoundException(`User with ID ${id} not found`)
+      throw new NotFoundException(`用户 ID ${id} 不存在`)
     }
 
     await db.delete(users).where(eq(users.id, id))
 
-    return { message: `User with ID ${id} has been deleted` }
+    // 删除后清缓存
+    await this.cacheService.delByPattern(`cache:user:*${id}*`)
+
+    return { message: `用户 ID ${id} 已删除` }
   }
 }

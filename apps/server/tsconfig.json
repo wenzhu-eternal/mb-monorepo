@@ -7,6 +7,7 @@
     "outDir": "./dist",
     "rootDir": "./src",
     "baseUrl": ".",
+    "types": ["node", "multer"],
     "paths": {
       "@/*": ["./src/*"],
       "@shared/*": ["../../packages/shared/dist/*"]

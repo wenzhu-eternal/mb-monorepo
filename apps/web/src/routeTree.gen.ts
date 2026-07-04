@@ -9,18 +9,31 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as WebsocketRouteImport } from './routes/websocket'
 import { Route as UsersRouteImport } from './routes/users'
+import { Route as SetupRouteImport } from './routes/setup'
 import { Route as NotFoundRouteImport } from './routes/not-found'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as FilesRouteImport } from './routes/files'
 import { Route as ErrorLogsRouteImport } from './routes/error-logs'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as AuditLogsRouteImport } from './routes/audit-logs'
 import { Route as R403RouteImport } from './routes/403'
 import { Route as IndexRouteImport } from './routes/index'
 
+const WebsocketRoute = WebsocketRouteImport.update({
+  id: '/websocket',
+  path: '/websocket',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const UsersRoute = UsersRouteImport.update({
   id: '/users',
   path: '/users',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SetupRoute = SetupRouteImport.update({
+  id: '/setup',
+  path: '/setup',
   getParentRoute: () => rootRouteImport,
 } as any)
 const NotFoundRoute = NotFoundRouteImport.update({
@@ -31,6 +44,11 @@ const NotFoundRoute = NotFoundRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FilesRoute = FilesRouteImport.update({
+  id: '/files',
+  path: '/files',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ErrorLogsRoute = ErrorLogsRouteImport.update({
@@ -65,9 +83,12 @@ export interface FileRoutesByFullPath {
   '/audit-logs': typeof AuditLogsRoute
   '/dashboard': typeof DashboardRoute
   '/error-logs': typeof ErrorLogsRoute
+  '/files': typeof FilesRoute
   '/login': typeof LoginRoute
   '/not-found': typeof NotFoundRoute
+  '/setup': typeof SetupRoute
   '/users': typeof UsersRoute
+  '/websocket': typeof WebsocketRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -75,9 +96,12 @@ export interface FileRoutesByTo {
   '/audit-logs': typeof AuditLogsRoute
   '/dashboard': typeof DashboardRoute
   '/error-logs': typeof ErrorLogsRoute
+  '/files': typeof FilesRoute
   '/login': typeof LoginRoute
   '/not-found': typeof NotFoundRoute
+  '/setup': typeof SetupRoute
   '/users': typeof UsersRoute
+  '/websocket': typeof WebsocketRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -86,9 +110,12 @@ export interface FileRoutesById {
   '/audit-logs': typeof AuditLogsRoute
   '/dashboard': typeof DashboardRoute
   '/error-logs': typeof ErrorLogsRoute
+  '/files': typeof FilesRoute
   '/login': typeof LoginRoute
   '/not-found': typeof NotFoundRoute
+  '/setup': typeof SetupRoute
   '/users': typeof UsersRoute
+  '/websocket': typeof WebsocketRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -98,9 +125,12 @@ export interface FileRouteTypes {
     | '/audit-logs'
     | '/dashboard'
     | '/error-logs'
+    | '/files'
     | '/login'
     | '/not-found'
+    | '/setup'
     | '/users'
+    | '/websocket'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -108,9 +138,12 @@ export interface FileRouteTypes {
     | '/audit-logs'
     | '/dashboard'
     | '/error-logs'
+    | '/files'
     | '/login'
     | '/not-found'
+    | '/setup'
     | '/users'
+    | '/websocket'
   id:
     | '__root__'
     | '/'
@@ -118,9 +151,12 @@ export interface FileRouteTypes {
     | '/audit-logs'
     | '/dashboard'
     | '/error-logs'
+    | '/files'
     | '/login'
     | '/not-found'
+    | '/setup'
     | '/users'
+    | '/websocket'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -129,18 +165,35 @@ export interface RootRouteChildren {
   AuditLogsRoute: typeof AuditLogsRoute
   DashboardRoute: typeof DashboardRoute
   ErrorLogsRoute: typeof ErrorLogsRoute
+  FilesRoute: typeof FilesRoute
   LoginRoute: typeof LoginRoute
   NotFoundRoute: typeof NotFoundRoute
+  SetupRoute: typeof SetupRoute
   UsersRoute: typeof UsersRoute
+  WebsocketRoute: typeof WebsocketRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/websocket': {
+      id: '/websocket'
+      path: '/websocket'
+      fullPath: '/websocket'
+      preLoaderRoute: typeof WebsocketRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/users': {
       id: '/users'
       path: '/users'
       fullPath: '/users'
       preLoaderRoute: typeof UsersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/setup': {
+      id: '/setup'
+      path: '/setup'
+      fullPath: '/setup'
+      preLoaderRoute: typeof SetupRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/not-found': {
@@ -155,6 +208,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/files': {
+      id: '/files'
+      path: '/files'
+      fullPath: '/files'
+      preLoaderRoute: typeof FilesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/error-logs': {
@@ -201,9 +261,12 @@ const rootRouteChildren: RootRouteChildren = {
   AuditLogsRoute: AuditLogsRoute,
   DashboardRoute: DashboardRoute,
   ErrorLogsRoute: ErrorLogsRoute,
+  FilesRoute: FilesRoute,
   LoginRoute: LoginRoute,
   NotFoundRoute: NotFoundRoute,
+  SetupRoute: SetupRoute,
   UsersRoute: UsersRoute,
+  WebsocketRoute: WebsocketRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

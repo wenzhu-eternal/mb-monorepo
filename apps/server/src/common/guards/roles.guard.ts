@@ -7,9 +7,9 @@ import {
 import { Reflector } from '@nestjs/core'
 import { eq } from 'drizzle-orm'
 import type { Request } from 'express'
+import { ROLES_KEY } from '@/common/decorators/roles.decorator'
 import { db } from '@/db'
 import { roles, users } from '@/db/schema'
-import { ROLES_KEY } from '@/common/decorators/roles.decorator'
 
 interface AuthenticatedRequest extends Request {
   user?: {
@@ -54,7 +54,7 @@ export class RolesGuard implements CanActivate {
     const userRecord = await db.query.users.findFirst({
       where: eq(users.id, userPayload.sub),
     })
-    if (!userRecord || !userRecord.roleId) {
+    if (!userRecord?.roleId) {
       throw new ForbiddenException('权限不足，未分配角色')
     }
 

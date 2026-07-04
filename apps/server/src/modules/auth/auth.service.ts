@@ -1,12 +1,12 @@
+import { randomUUID } from 'node:crypto'
 import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { JwtService } from '@nestjs/jwt'
 import * as argon2 from 'argon2'
 import { eq } from 'drizzle-orm'
-import { randomUUID } from 'node:crypto'
 import { db } from '@/db'
 import type { User } from '@/db/schema'
-import { users } from '@/db/schema'
+import { rolePermissions, roles, users } from '@/db/schema'
 import { RedisService } from '@/modules/redis/redis.service'
 
 export interface TokenPayload {
@@ -40,12 +40,12 @@ export class AuthService {
     })
 
     if (!user) {
-      throw new UnauthorizedException('Invalid credentials')
+      throw new UnauthorizedException('用户名或密码错误')
     }
 
     const isPasswordValid = await argon2.verify(user.password, password)
     if (!isPasswordValid) {
-      throw new UnauthorizedException('Invalid credentials')
+      throw new UnauthorizedException('用户名或密码错误')
     }
 
     // 禁用用户禁止登录
@@ -53,20 +53,21 @@ export class AuthService {
       throw new UnauthorizedException('账号已被禁用，请联系管理员')
     }
 
-    const tokens = await this.generateTokens({
+    const tokens = await this.signTokenPair({
       sub: user.id,
       username: user.username,
       email: user.email,
     })
 
     // 把 refreshToken 的 jti 存入 Redis，用于吊销校验
-    await this.storeRefreshToken(tokens.refreshToken, user.id)
+    await this.storeRefreshTokenForExternal(tokens.refreshToken, user.id)
 
+    const permissions = await this.getPermissionsByUserId(user.id)
     const { password: _, ...userWithoutPassword } = user
 
     return {
       ...tokens,
-      user: userWithoutPassword,
+      user: { ...userWithoutPassword, permissions } as Omit<User, 'password'> & { permissions: string[] },
     }
   }
 
@@ -76,13 +77,13 @@ export class AuthService {
       const secret = this.configService.get<string>('JWT_REFRESH_SECRET')
       payload = await this.jwtService.verifyAsync(refreshToken, { secret })
     } catch {
-      throw new UnauthorizedException('Invalid refresh token')
+      throw new UnauthorizedException('刷新令牌无效')
     }
 
     // 校验 Redis 中存在该 token（已 logout 则不存在，实现真正吊销）
     const stored = await this.redisService.get(`refresh:${payload.sub}:${payload.jti}`)
     if (stored !== '1') {
-      throw new UnauthorizedException('Refresh token has been revoked')
+      throw new UnauthorizedException('刷新令牌已被吊销')
     }
 
     const user = await db.query.users.findFirst({
@@ -90,19 +91,19 @@ export class AuthService {
     })
 
     if (!user) {
-      throw new UnauthorizedException('User not found')
+      throw new UnauthorizedException('用户不存在')
     }
 
     // 旧 token 立即作废（防重放）
     await this.redisService.del(`refresh:${payload.sub}:${payload.jti}`)
 
-    const tokens = await this.generateTokens({
+    const tokens = await this.signTokenPair({
       sub: user.id,
       username: user.username,
       email: user.email,
     })
 
-    await this.storeRefreshToken(tokens.refreshToken, user.id)
+    await this.storeRefreshTokenForExternal(tokens.refreshToken, user.id)
 
     return tokens
   }
@@ -113,20 +114,21 @@ export class AuthService {
    */
   async logout(userId: number): Promise<{ message: string }> {
     await this.redisService.deleteByPattern(`refresh:${userId}:*`)
-    return { message: 'Logged out successfully' }
+    return { message: '退出登录成功' }
   }
 
-  async getProfile(userId: number): Promise<Omit<User, 'password'>> {
+  async getProfile(userId: number): Promise<Omit<User, 'password'> & { permissions: string[] }> {
     const user = await db.query.users.findFirst({
       where: eq(users.id, userId),
     })
 
     if (!user) {
-      throw new UnauthorizedException('User not found')
+      throw new UnauthorizedException('用户不存在')
     }
 
+    const permissions = await this.getPermissionsByUserId(userId)
     const { password: _, ...userWithoutPassword } = user
-    return userWithoutPassword
+    return { ...userWithoutPassword, permissions }
   }
 
   async register(
@@ -140,7 +142,7 @@ export class AuthService {
     })
 
     if (existingUser) {
-      throw new ConflictException('Username already exists')
+      throw new ConflictException('用户名已存在')
     }
 
     const existingEmail = await db.query.users.findFirst({
@@ -148,7 +150,7 @@ export class AuthService {
     })
 
     if (existingEmail) {
-      throw new ConflictException('Email already exists')
+      throw new ConflictException('邮箱已存在')
     }
 
     const hashedPassword = await argon2.hash(password)
@@ -164,14 +166,17 @@ export class AuthService {
       .returning()
 
     if (!newUser) {
-      throw new ConflictException('Failed to create user')
+      throw new ConflictException('创建用户失败')
     }
 
     const { password: _, ...userWithoutPassword } = newUser
     return userWithoutPassword
   }
 
-  private async generateTokens(payload: TokenPayload): Promise<TokenPair> {
+  /**
+   * 签发访问/刷新令牌对。公开供第三方登录（如微信）复用。
+   */
+  async signTokenPair(payload: TokenPayload): Promise<TokenPair> {
     const accessTokenSecret = this.configService.get<string>('JWT_SECRET')
     const refreshTokenSecret = this.configService.get<string>('JWT_REFRESH_SECRET')
 
@@ -183,10 +188,13 @@ export class AuthService {
         secret: accessTokenSecret,
         expiresIn: '15m',
       }),
-      this.jwtService.signAsync({ ...payload, jti }, {
-        secret: refreshTokenSecret,
-        expiresIn: '7d',
-      }),
+      this.jwtService.signAsync(
+        { ...payload, jti },
+        {
+          secret: refreshTokenSecret,
+          expiresIn: '7d',
+        },
+      ),
     ])
 
     return { accessToken, refreshToken }
@@ -194,8 +202,9 @@ export class AuthService {
 
   /**
    * 存储 refreshToken 到 Redis: key=refresh:{userId}:{jti}, value=1, TTL=7d
+   * 公开供第三方登录（如微信）复用。
    */
-  private async storeRefreshToken(token: string, userId: number): Promise<void> {
+  async storeRefreshTokenForExternal(token: string, userId: number): Promise<void> {
     try {
       const decoded = await this.jwtService.verifyAsync(token, {
         secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
@@ -208,5 +217,23 @@ export class AuthService {
     } catch (err) {
       console.error('[Auth] 存储 refreshToken 到 Redis 失败:', err)
     }
+  }
+
+  /**
+   * 根据用户 ID 查询权限码列表
+   * 通过 users.roleId → role_permissions.permission 获取
+   */
+  private async getPermissionsByUserId(userId: number): Promise<string[]> {
+    const userRecord = await db.query.users.findFirst({
+      where: eq(users.id, userId),
+    })
+    if (!userRecord?.roleId) return []
+
+    const perms = await db
+      .select({ permission: rolePermissions.permission })
+      .from(rolePermissions)
+      .where(eq(rolePermissions.roleId, userRecord.roleId))
+
+    return perms.map((p) => p.permission)
   }
 }

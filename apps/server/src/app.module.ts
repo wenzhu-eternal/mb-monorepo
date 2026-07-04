@@ -1,20 +1,30 @@
+import { join } from 'node:path'
 import { Module } from '@nestjs/common'
 import { ConfigModule, ConfigService } from '@nestjs/config'
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core'
 import { ScheduleModule } from '@nestjs/schedule'
 import { ServeStaticModule } from '@nestjs/serve-static'
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler'
-import { join } from 'node:path'
 import { CommonModule } from './common/common.module'
 import { AuditInterceptor } from './common/interceptors/audit.interceptor'
 import { DatabaseModule } from './db/database.module'
 import { AuditModule } from './modules/audit/audit.module'
 import { AuthModule } from './modules/auth/auth.module'
+import { CacheModule } from './modules/cache/cache.module'
 import { ErrorLogsModule } from './modules/error-logs/error-logs.module'
+import { FilesModule } from './modules/files/files.module'
 import { HealthModule } from './modules/health/health.module'
+import { HttpClientModule } from './modules/http-client/http-client.module'
+import { MailModule } from './modules/mail/mail.module'
+import { NotificationsModule } from './modules/notifications/notifications.module'
 import { RedisModule } from './modules/redis/redis.module'
 import { RolesModule } from './modules/roles/roles.module'
+import { RoutesModule } from './modules/routes/routes.module'
+import { ScheduleTasksModule } from './modules/schedule/schedule.module'
+import { SetupModule } from './modules/setup/setup.module'
 import { UsersModule } from './modules/users/users.module'
+import { WebSocketModule } from './modules/websocket/websocket.module'
+import { WechatModule } from './modules/wechat/wechat.module'
 
 @Module({
   imports: [
@@ -42,12 +52,22 @@ import { UsersModule } from './modules/users/users.module'
     DatabaseModule,
     RedisModule,
     CommonModule,
+    CacheModule,
+    HttpClientModule,
     AuthModule,
     UsersModule,
     RolesModule,
     HealthModule,
     AuditModule,
     ErrorLogsModule,
+    FilesModule,
+    MailModule,
+    NotificationsModule,
+    ScheduleTasksModule,
+    WechatModule,
+    WebSocketModule,
+    SetupModule,
+    RoutesModule,
   ],
   providers: [
     {

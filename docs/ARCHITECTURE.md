@@ -70,8 +70,7 @@ mb-monorepo/
 │   │       └── pagination.schema.ts
 │   └── config/                   # 共享 biome/tsconfig
 ├── docs/
-│   ├── ARCHITECTURE.md
-│   └── REFACTOR_PLAN.md
+│   └── ARCHITECTURE.md
 ├── .github/workflows/ci.yml
 ├── docker-compose.yml
 ├── pnpm-workspace.yaml

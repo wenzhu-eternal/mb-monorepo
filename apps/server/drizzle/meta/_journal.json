@@ -8,6 +8,41 @@
       "when": 1782828374439,
       "tag": "0000_dark_machine_man",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1783079442178,
+      "tag": "0001_loud_steel_serpent",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1783080106847,
+      "tag": "0002_rich_phil_sheldon",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1783082191540,
+      "tag": "0003_premium_squadron_supreme",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1783082667997,
+      "tag": "0004_stiff_nocturne",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1783151857630,
+      "tag": "0005_lying_daredevil",
+      "breakpoints": true
     }
   ]
 }

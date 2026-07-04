@@ -23,6 +23,10 @@ export default defineConfig({
         target: 'http://localhost:9000',
         changeOrigin: true,
       },
+      '/socket.io': {
+        target: 'ws://localhost:9000',
+        ws: true,
+      },
     },
   },
 })

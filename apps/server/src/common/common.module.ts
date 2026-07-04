@@ -1,7 +1,8 @@
-import { Global, Module } from '@nestjs/common'
+import { Global, MiddlewareConsumer, Module, NestModule } from '@nestjs/common'
 import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core'
 import { HttpExceptionFilter } from './filters/http-exception.filter'
 import { ResponseInterceptor } from './interceptors/response.interceptor'
+import { SanitizeMiddleware } from './middleware/sanitize.middleware'
 
 @Global()
 @Module({
@@ -16,4 +17,8 @@ import { ResponseInterceptor } from './interceptors/response.interceptor'
     },
   ],
 })
-export class CommonModule {}
+export class CommonModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(SanitizeMiddleware).forRoutes('*')
+  }
+}

@@ -60,10 +60,7 @@ export class RolesService {
     return created
   }
 
-  async update(
-    id: number,
-    data: { name?: string; description?: string },
-  ): Promise<Role> {
+  async update(id: number, data: { name?: string; description?: string }): Promise<Role> {
     const existing = await db.query.roles.findFirst({ where: eq(roles.id, id) })
     if (!existing) {
       throw new NotFoundException(`角色 ID ${id} 不存在`)

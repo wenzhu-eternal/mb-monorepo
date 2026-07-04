@@ -57,7 +57,7 @@ export class AuthController {
     // 优先从 httpOnly cookie 读取，兜底 body（兼容旧客户端）
     const refreshToken = request.cookies?.refreshToken ?? refreshTokenFromBody
     if (!refreshToken) {
-      throw new UnauthorizedException('Missing refresh token')
+      throw new UnauthorizedException('缺少刷新令牌')
     }
 
     const tokens = await this.authService.refresh(refreshToken)
@@ -80,10 +80,7 @@ export class AuthController {
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '用户登出' })
-  async logout(
-    @CurrentUser() user: TokenPayload,
-    @Res({ passthrough: true }) response: Response,
-  ) {
+  async logout(@CurrentUser() user: TokenPayload, @Res({ passthrough: true }) response: Response) {
     // 清除 httpOnly cookie 中的 refreshToken
     response.clearCookie('refreshToken', { path: '/api/v1/auth' })
     // 删除 Redis 中的 refreshToken 记录，实现真正吊销

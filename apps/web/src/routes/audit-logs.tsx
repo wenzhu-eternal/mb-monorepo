@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { Alert, Card, Empty, Table, Tag, Typography } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { useState } from 'react'
-import { useAuditLogs, type AuditLog } from '@/hooks/use-logs'
+import { type AuditLog, useAuditLogs } from '@/hooks/use-logs'
 import { AuthenticatedLayout } from '@/layouts/authenticated-layout'
 
 const { Title } = Typography
@@ -54,7 +54,7 @@ function AuditLogsPage() {
       <Title level={3}>审计日志</Title>
 
       <Alert
-        message="审计日志记录系统中所有写操作（创建/更新/删除）"
+        title="审计日志记录系统中所有写操作（创建/更新/删除）"
         type="info"
         showIcon
         style={{ marginBottom: 16 }}
@@ -62,7 +62,7 @@ function AuditLogsPage() {
 
       {isError && (
         <Alert
-          message="加载失败"
+          title="加载失败"
           description={(error as Error)?.message ?? '未知错误'}
           type="error"
           showIcon

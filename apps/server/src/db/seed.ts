@@ -1,6 +1,7 @@
 import 'dotenv/config'
+import { eq } from 'drizzle-orm'
 import { db } from './index'
-import { errorWhitelist, roles, users } from './schema'
+import { errorWhitelist, rolePermissions, roles, users } from './schema'
 
 // argon2 hash for password "admin123"
 const ADMIN_PASSWORD_HASH =
@@ -9,22 +10,36 @@ const ADMIN_PASSWORD_HASH =
 async function seed() {
   console.log('Seeding database...')
 
-  // Create admin role
+  // Create admin role (idempotent)
   const [adminRole] = await db
     .insert(roles)
     .values({
       name: 'admin',
       description: 'System administrator with full access',
     })
+    .onConflictDoNothing()
     .returning()
 
-  if (!adminRole) {
-    throw new Error('Failed to create admin role')
+  // Fetch existing admin role if insert was skipped
+  const role = adminRole ?? (await db.query.roles.findFirst({ where: eq(roles.name, 'admin') }))
+
+  if (!role) {
+    throw new Error('Failed to create or find admin role')
   }
 
-  console.log('Created admin role:', adminRole)
+  console.log('Admin role ready:', role)
 
-  // Create default admin user
+  const adminPermissions = [
+    'user:view', 'user:create', 'user:update', 'user:delete',
+    'role:view', 'role:create', 'role:update', 'role:delete',
+    'file:view', 'file:upload',
+  ]
+  await db.insert(rolePermissions).values(
+    adminPermissions.map((permission) => ({ roleId: role.id, permission })),
+  ).onConflictDoNothing()
+  console.log('Seeded admin permissions:', adminPermissions)
+
+  // Create default admin user (idempotent)
   const [adminUser] = await db
     .insert(users)
     .values({
@@ -32,14 +47,15 @@ async function seed() {
       email: 'admin@example.com',
       password: ADMIN_PASSWORD_HASH,
       nickname: 'Administrator',
-      roleId: adminRole.id,
+      roleId: role.id,
       status: true,
     })
+    .onConflictDoNothing()
     .returning()
 
   console.log('Created admin user:', adminUser)
 
-  // Create initial error whitelist entries
+  // Create initial error whitelist entries (idempotent)
   const whitelistEntries = await db
     .insert(errorWhitelist)
     .values([
@@ -59,9 +75,10 @@ async function seed() {
         isActive: false,
       },
     ])
+    .onConflictDoNothing()
     .returning()
 
-  console.log('Created error whitelist entries:', whitelistEntries)
+  console.log('Error whitelist entries:', whitelistEntries.length ? 'created' : 'already exist')
 
   console.log('Database seeded successfully!')
 }

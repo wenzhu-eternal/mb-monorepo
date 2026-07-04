@@ -13,7 +13,9 @@ export const useUsers = (params: PaginationQuery) => {
   return useQuery({
     queryKey: ['users', params],
     queryFn: async () => {
-      const response = await api.get<ApiResponse<PaginatedResponse<User>>>('/api/v1/users', { params })
+      const response = await api.get<ApiResponse<PaginatedResponse<User>>>('/api/v1/users', {
+        params,
+      })
       return response.data.data!
     },
   })

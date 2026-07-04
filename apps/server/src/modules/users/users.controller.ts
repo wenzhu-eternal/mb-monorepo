@@ -12,11 +12,13 @@ import {
   Post,
   Query,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common'
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger'
 import { Roles } from '@/common/decorators/roles.decorator'
 import { RolesGuard } from '@/common/guards/roles.guard'
 import { AuthGuard } from '@/modules/auth/auth.guard'
+import { CacheInterceptor } from '@/modules/cache/cache.interceptor'
 import { CreateUserDto } from './dto/create-user.dto'
 import { UpdateUserDto } from './dto/update-user.dto'
 import { UsersService } from './users.service'
@@ -52,7 +54,8 @@ export class UsersController {
   }
 
   @Get(':id')
-  @ApiOperation({ summary: '按ID查询用户' })
+  @UseInterceptors(CacheInterceptor)
+  @ApiOperation({ summary: '按ID查询用户（带缓存）' })
   async findOne(@Param('id', ParseIntPipe) id: number) {
     return this.usersService.findById(id)
   }

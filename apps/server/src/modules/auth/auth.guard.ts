@@ -28,7 +28,7 @@ export class AuthGuard implements CanActivate {
     const token = this.extractTokenFromHeader(request)
 
     if (!token) {
-      throw new UnauthorizedException('Missing access token')
+      throw new UnauthorizedException('缺少访问令牌')
     }
 
     try {
@@ -36,7 +36,7 @@ export class AuthGuard implements CanActivate {
       const payload = await this.jwtService.verifyAsync(token, { secret })
       request.user = payload
     } catch {
-      throw new UnauthorizedException('Invalid access token')
+      throw new UnauthorizedException('访问令牌无效')
     }
 
     return true

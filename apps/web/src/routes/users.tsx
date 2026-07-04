@@ -60,10 +60,7 @@ function UsersPage() {
           <Button type="link" onClick={() => handleEdit(record)}>
             编辑
           </Button>
-          <Popconfirm
-            title="确定要删除该用户吗？"
-            onConfirm={() => handleDelete(record.id)}
-          >
+          <Popconfirm title="确定要删除该用户吗？" onConfirm={() => handleDelete(record.id)}>
             <Button type="link" danger>
               删除
             </Button>
@@ -176,9 +173,7 @@ function UsersPage() {
               <Form.Item
                 name="password"
                 label="密码"
-                rules={[
-                  { required: true, min: 6, message: '密码至少 6 个字符' },
-                ]}
+                rules={[{ required: true, min: 6, message: '密码至少 6 个字符' }]}
               >
                 <Input.Password />
               </Form.Item>

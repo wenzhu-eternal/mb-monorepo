@@ -32,6 +32,8 @@ const envSchema = z
     // WeApp (optional)
     WEAPP_APPID: z.string().optional(),
     WEAPP_SECRET: z.string().optional(),
+    // 微信扫码登录回调地址（网站应用 OAuth）
+    WECHAT_REDIRECT_URI: z.string().url().optional(),
 
     // Throttle: 登录接口建议单独更严格限流
     THROTTLE_TTL: z.coerce.number().default(60),

@@ -1,6 +1,7 @@
 import { createRouter, RouterProvider } from '@tanstack/react-router'
 import React from 'react'
 import ReactDOM from 'react-dom/client'
+import { installGlobalErrorHandlers } from '@/lib/error-reporter'
 import './index.css'
 import { routeTree } from './routeTree.gen'
 
@@ -26,6 +27,7 @@ async function enableMocking() {
 const rootElement = document.getElementById('root')!
 
 enableMocking().then(() => {
+  installGlobalErrorHandlers()
   ReactDOM.createRoot(rootElement).render(
     <React.StrictMode>
       <RouterProvider router={router} />

@@ -1,11 +1,21 @@
 import { Injectable, NotFoundException } from '@nestjs/common'
-import { count, desc, eq, ilike } from 'drizzle-orm'
+import { and, count, desc, eq, ilike, sql } from 'drizzle-orm'
 import { db } from '@/db'
 import { errorLogs } from '@/db/schema'
+import { errorWhitelist } from '@/db/schema/error-whitelist'
+import { RedisService } from '@/modules/redis/redis.service'
 
-export interface RecordErrorLogParams {
+export interface ReportErrorParams {
+  source?: string
+  errorType?: string
   message: string
   stack?: string
+  file?: string
+  line?: number
+  column?: number
+  url?: string
+  method?: string
+  statusCode?: number
   context?: Record<string, unknown>
   userId?: number
   ip?: string
@@ -15,12 +25,23 @@ export interface RecordErrorLogParams {
 export interface PaginatedErrorLogs {
   list: Array<{
     id: number
+    source: string
+    errorType: string | null
     message: string
     stack: string | null
+    file: string | null
+    line: number | null
+    column: number | null
+    url: string | null
+    method: string | null
+    statusCode: number | null
     context: unknown
     userId: number | null
     ip: string | null
     userAgent: string | null
+    isResolved: boolean
+    resolvedAt: Date | null
+    resolvedBy: number | null
     createdAt: Date
   }>
   total: number
@@ -29,10 +50,72 @@ export interface PaginatedErrorLogs {
   totalPages: number
 }
 
+export interface ErrorStats {
+  total: number
+  unresolved: number
+  bySource: Record<string, number>
+  byType: Record<string, number>
+}
+
+// 白名单缓存 key 与 TTL
+const WHITELIST_CACHE_KEY = 'error:whitelist:all'
+const WHITELIST_CACHE_TTL = 60
+
 @Injectable()
 export class ErrorLogsService {
-  async record(params: RecordErrorLogParams): Promise<void> {
-    await db.insert(errorLogs).values({
+  constructor(private readonly redisService: RedisService) {}
+
+  /**
+   * 前端/后端上报错误（公开 API，不需要 admin 权限）
+   */
+  async report(params: ReportErrorParams): Promise<{ id: number }> {
+    // 白名单过滤
+    const isWhitelisted = await this.checkWhitelist(params.message, params.url)
+    if (isWhitelisted) {
+      return { id: -1 }
+    }
+
+    const [created] = await db
+      .insert(errorLogs)
+      .values({
+        source: params.source ?? 'backend',
+        errorType: params.errorType,
+        message: params.message,
+        stack: params.stack,
+        file: params.file,
+        line: params.line,
+        column: params.column,
+        url: params.url,
+        method: params.method,
+        statusCode: params.statusCode,
+        context: params.context,
+        userId: params.userId,
+        ip: params.ip,
+        userAgent: params.userAgent,
+      })
+      .returning()
+
+    if (!created) {
+      return { id: -1 }
+    }
+
+    return { id: created.id }
+  }
+
+  /**
+   * 后端内部记录错误（供 ExceptionFilter 等调用）
+   */
+  async record(params: {
+    message: string
+    stack?: string
+    context?: Record<string, unknown>
+    userId?: number
+    ip?: string
+    userAgent?: string
+  }): Promise<void> {
+    await this.report({
+      source: 'backend',
+      errorType: 'http_error',
       message: params.message,
       stack: params.stack,
       context: params.context,
@@ -46,36 +129,35 @@ export class ErrorLogsService {
     page = 1,
     pageSize = 10,
     keyword?: string,
+    source?: string,
+    isResolved?: string,
   ): Promise<PaginatedErrorLogs> {
     const safePage = Math.max(1, page)
     const safePageSize = Math.min(Math.max(1, pageSize), 100)
     const offset = (safePage - 1) * safePageSize
 
-    // 关键词搜索: message 模糊匹配；无关键词查全表
-    const baseQuery = db
-      .select({
-        id: errorLogs.id,
-        message: errorLogs.message,
-        stack: errorLogs.stack,
-        context: errorLogs.context,
-        userId: errorLogs.userId,
-        ip: errorLogs.ip,
-        userAgent: errorLogs.userAgent,
-        createdAt: errorLogs.createdAt,
-      })
-      .from(errorLogs)
-      .orderBy(desc(errorLogs.createdAt))
-      .limit(safePageSize)
-      .offset(offset)
+    const conditions = []
+    if (keyword) {
+      conditions.push(ilike(errorLogs.message, `%${keyword}%`))
+    }
+    if (source) {
+      conditions.push(eq(errorLogs.source, source))
+    }
+    if (isResolved !== undefined) {
+      conditions.push(eq(errorLogs.isResolved, isResolved === 'true'))
+    }
+    const where = conditions.length > 0 ? and(...conditions) : undefined
 
-    const countQuery = db.select({ value: count() }).from(errorLogs)
-
-    const [items, countResult] = keyword
-      ? await Promise.all([
-          baseQuery.where(ilike(errorLogs.message, `%${keyword}%`)),
-          countQuery.where(ilike(errorLogs.message, `%${keyword}%`)),
-        ])
-      : await Promise.all([baseQuery, countQuery])
+    const [items, countResult] = await Promise.all([
+      db
+        .select()
+        .from(errorLogs)
+        .where(where)
+        .orderBy(desc(errorLogs.createdAt))
+        .limit(safePageSize)
+        .offset(offset),
+      db.select({ value: count() }).from(errorLogs).where(where),
+    ])
 
     const total = countResult[0]?.value ?? 0
     return {
@@ -97,6 +179,67 @@ export class ErrorLogsService {
     return log
   }
 
+  /**
+   * 获取错误统计
+   */
+  async getStats(): Promise<ErrorStats> {
+    const [totalResult] = await db.select({ value: count() }).from(errorLogs)
+    const [unresolvedResult] = await db
+      .select({ value: count() })
+      .from(errorLogs)
+      .where(eq(errorLogs.isResolved, false))
+
+    const sourceRows = await db
+      .select({ source: errorLogs.source, value: count() })
+      .from(errorLogs)
+      .groupBy(errorLogs.source)
+
+    const typeRows = await db
+      .select({ errorType: errorLogs.errorType, value: count() })
+      .from(errorLogs)
+      .groupBy(errorLogs.errorType)
+
+    const bySource: Record<string, number> = {}
+    for (const row of sourceRows) {
+      bySource[row.source ?? 'unknown'] = row.value
+    }
+
+    const byType: Record<string, number> = {}
+    for (const row of typeRows) {
+      byType[row.errorType ?? 'unknown'] = row.value
+    }
+
+    return {
+      total: totalResult?.value ?? 0,
+      unresolved: unresolvedResult?.value ?? 0,
+      bySource,
+      byType,
+    }
+  }
+
+  /**
+   * 标记错误已处理
+   */
+  async resolve(id: number, resolvedBy: number): Promise<{ message: string }> {
+    const log = await db.query.errorLogs.findFirst({
+      where: eq(errorLogs.id, id),
+    })
+    if (!log) {
+      throw new NotFoundException(`错误日志 ID ${id} 不存在`)
+    }
+
+    await db
+      .update(errorLogs)
+      .set({
+        isResolved: true,
+        resolvedAt: new Date(),
+        resolvedBy,
+      })
+      .where(eq(errorLogs.id, id))
+
+    return { message: `错误日志 ID ${id} 已标记为已处理` }
+  }
+
   async remove(id: number): Promise<{ message: string }> {
     const log = await db.query.errorLogs.findFirst({
       where: eq(errorLogs.id, id),
@@ -106,5 +249,140 @@ export class ErrorLogsService {
     }
     await db.delete(errorLogs).where(eq(errorLogs.id, id))
     return { message: `错误日志 ID ${id} 已删除` }
+  }
+
+  // ===== 白名单 =====
+
+  private async checkWhitelist(message: string, url?: string): Promise<boolean> {
+    try {
+      const cached = await this.redisService.get(WHITELIST_CACHE_KEY)
+      if (cached) {
+        const list = JSON.parse(cached) as Array<{
+          pattern: string
+          matchType: string
+          isActive: boolean
+        }>
+        return this.matchWhitelist(list, message, url)
+      }
+    } catch {
+      // 缓存查询失败，直接查库
+    }
+
+    const list = await db.select().from(errorWhitelist).where(eq(errorWhitelist.isActive, true))
+    return this.matchWhitelist(list, message, url)
+  }
+
+  private matchWhitelist(
+    list: Array<{ pattern: string; matchType: string }>,
+    message: string,
+    url?: string,
+  ): boolean {
+    for (const rule of list) {
+      if (rule.matchType === 'message' && message.includes(rule.pattern)) {
+        return true
+      }
+      if (rule.matchType === 'url' && url?.includes(rule.pattern)) {
+        return true
+      }
+    }
+    return false
+  }
+
+  async findWhitelist() {
+    try {
+      const cached = await this.redisService.get(WHITELIST_CACHE_KEY)
+      if (cached) {
+        return JSON.parse(cached)
+      }
+    } catch {
+      // 缓存查询失败不影响主流程
+    }
+
+    const list = await db.select().from(errorWhitelist).orderBy(desc(errorWhitelist.createdAt))
+
+    try {
+      await this.redisService.set(WHITELIST_CACHE_KEY, JSON.stringify(list), WHITELIST_CACHE_TTL)
+    } catch {
+      // 缓存写入失败忽略
+    }
+
+    return list
+  }
+
+  async createWhitelist(data: {
+    pattern: string
+    matchType?: string
+    description?: string
+    isActive?: boolean
+  }) {
+    const [created] = await db
+      .insert(errorWhitelist)
+      .values({
+        pattern: data.pattern,
+        matchType: (data.matchType as 'message' | 'url') ?? 'message',
+        description: data.description,
+        isActive: data.isActive ?? true,
+      })
+      .returning()
+
+    await this.invalidateWhitelistCache()
+    return created
+  }
+
+  async updateWhitelist(
+    id: number,
+    data: {
+      pattern?: string
+      matchType?: string
+      description?: string
+      isActive?: boolean
+    },
+  ) {
+    const existing = await db.query.errorWhitelist.findFirst({
+      where: eq(errorWhitelist.id, id),
+    })
+    if (!existing) {
+      throw new NotFoundException(`白名单 ID ${id} 不存在`)
+    }
+
+    const updateData: Record<string, unknown> = { updatedAt: new Date() }
+    if (data.pattern !== undefined) updateData.pattern = data.pattern
+    if (data.matchType !== undefined) updateData.matchType = data.matchType
+    if (data.description !== undefined) updateData.description = data.description
+    if (data.isActive !== undefined) updateData.isActive = data.isActive
+
+    const [updated] = await db
+      .update(errorWhitelist)
+      .set(updateData)
+      .where(eq(errorWhitelist.id, id))
+      .returning()
+
+    if (!updated) {
+      throw new NotFoundException(`更新白名单 ID ${id} 失败`)
+    }
+
+    await this.invalidateWhitelistCache()
+    return updated
+  }
+
+  async removeWhitelist(id: number): Promise<{ message: string }> {
+    const existing = await db.query.errorWhitelist.findFirst({
+      where: eq(errorWhitelist.id, id),
+    })
+    if (!existing) {
+      throw new NotFoundException(`白名单 ID ${id} 不存在`)
+    }
+
+    await db.delete(errorWhitelist).where(eq(errorWhitelist.id, id))
+    await this.invalidateWhitelistCache()
+    return { message: `白名单 ID ${id} 已删除` }
+  }
+
+  private async invalidateWhitelistCache(): Promise<void> {
+    try {
+      await this.redisService.del(WHITELIST_CACHE_KEY)
+    } catch {
+      // 缓存失效失败忽略，等待 TTL 过期
+    }
   }
 }

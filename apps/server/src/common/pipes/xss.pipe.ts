@@ -1,0 +1,38 @@
+import { Injectable, type PipeTransform } from '@nestjs/common'
+import xss from 'xss'
+
+/**
+ * XSS 清洗管道: 递归清洗对象中所有字符串字段
+ * 用于全局 ValidationPipe 之后，确保入库数据不含恶意脚本
+ */
+@Injectable()
+export class XssPipe implements PipeTransform {
+  transform(value: unknown): unknown {
+    return this.sanitize(value)
+  }
+
+  private sanitize(value: unknown): unknown {
+    if (typeof value === 'string') {
+      // 保留中文/英文/数字/常用标点，清洗 <script>/onerror=/javascript: 等
+      return xss(value, {
+        whiteList: {}, // 移除所有 HTML 标签
+        stripIgnoreTag: true,
+        stripIgnoreTagBody: ['script'],
+      })
+    }
+
+    if (Array.isArray(value)) {
+      return value.map((item) => this.sanitize(item))
+    }
+
+    if (value && typeof value === 'object') {
+      const result: Record<string, unknown> = {}
+      for (const [key, val] of Object.entries(value)) {
+        result[key] = this.sanitize(val)
+      }
+      return result
+    }
+
+    return value
+  }
+}

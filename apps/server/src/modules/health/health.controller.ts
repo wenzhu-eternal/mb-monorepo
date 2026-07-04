@@ -1,10 +1,4 @@
-import {
-  Controller,
-  Get,
-  HttpCode,
-  HttpStatus,
-  ServiceUnavailableException,
-} from '@nestjs/common'
+import { Controller, Get, HttpCode, HttpStatus, ServiceUnavailableException } from '@nestjs/common'
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger'
 import { SkipThrottle } from '@nestjs/throttler'
 import { HealthService } from './health.service'
