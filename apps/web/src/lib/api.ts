@@ -47,7 +47,8 @@ api.interceptors.response.use(
     if (
       error.response?.status === 401 &&
       !originalRequest._retry &&
-      !originalRequest.url?.includes('/api/v1/auth/refresh')
+      !originalRequest.url?.includes('/api/v1/auth/refresh') &&
+      !originalRequest.url?.includes('/api/v1/auth/login')
     ) {
       if (isRefreshing) {
         // 排队等待 refresh 完成，加 15s 超时避免永久挂起
