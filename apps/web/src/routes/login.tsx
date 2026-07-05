@@ -28,7 +28,10 @@ function LoginPage() {
       messageApi.success('登录成功')
       navigate({ to: '/dashboard' })
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : '登录失败，请检查账号密码'
+      const msg =
+        err instanceof Error && 'response' in err
+          ? (err as { response?: { data?: { message?: string } } }).response?.data?.message || err.message
+          : '登录失败，请检查账号密码'
       messageApi.error(msg)
     }
   }
