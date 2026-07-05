@@ -1,10 +1,17 @@
 # ===== Build stage =====
 FROM node:20-alpine AS builder
+ARG HTTP_PROXY
+ARG HTTPS_PROXY
+ARG http_proxy
+ARG https_proxy
+ENV HTTP_PROXY=${HTTP_PROXY} HTTPS_PROXY=${HTTPS_PROXY} http_proxy=${http_proxy} https_proxy=${https_proxy}
+RUN sed -i 's|https://dl-cdn.alpinelinux.org|http://mirrors.aliyun.com|g' /etc/apk/repositories
 RUN apk add --no-cache python3 make g++
-RUN corepack enable && corepack prepare pnpm@10.32.1 --activate
+RUN npm install -g pnpm@10.32.1 --registry=https://registry.npmmirror.com
+RUN pnpm config set registry https://registry.npmmirror.com
 WORKDIR /app
 
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml tsconfig.base.json ./
 COPY apps/server/package.json ./apps/server/
 COPY apps/web/package.json ./apps/web/
 COPY packages/shared/package.json ./packages/shared/
@@ -19,10 +26,9 @@ RUN pnpm -F @mb/server build
 COPY apps/web/ ./apps/web/
 RUN pnpm -F @mb/web build
 
-RUN pnpm prune --prod
-
 # ===== Runtime stage =====
 FROM node:20-alpine AS runner
+RUN sed -i 's|https://dl-cdn.alpinelinux.org|http://mirrors.aliyun.com|g' /etc/apk/repositories
 RUN apk add --no-cache tini
 WORKDIR /app
 ENV NODE_ENV=production
