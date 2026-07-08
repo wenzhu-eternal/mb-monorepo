@@ -5,10 +5,11 @@ import {
   Injectable,
 } from '@nestjs/common'
 import { Reflector } from '@nestjs/core'
-import { eq } from 'drizzle-orm'
+import { and, eq, inArray } from 'drizzle-orm'
 import type { Request } from 'express'
 import { PERMISSIONS_KEY } from '@/common/decorators/permissions.decorator'
 import { db } from '@/db'
+import { notDeleted } from '@/db/helpers'
 import { permissions, rolePermissions, users } from '@/db/schema'
 
 interface AuthenticatedRequest extends Request {
@@ -52,13 +53,13 @@ export class PermissionsGuard implements CanActivate {
 
     // 查询用户
     const userRecord = await db.query.users.findFirst({
-      where: eq(users.id, userPayload.sub),
+      where: and(eq(users.id, userPayload.sub), notDeleted(users.deletedAt)),
     })
     if (!userRecord?.roleId) {
       throw new ForbiddenException('权限不足，未分配角色')
     }
 
-    // 查询用户权限码
+    // 查询用户权限码（role_permissions 是关联表无软删除，permissions 软删除在 code 查询时过滤）
     const userPermissions = await db
       .select({ permission: rolePermissions.permission })
       .from(rolePermissions)
@@ -72,11 +73,16 @@ export class PermissionsGuard implements CanActivate {
       return true
     }
 
-    // 如果权限码不够，检查路由权限
-    // 获取权限的 routes
-    const permissionRecords = await db.query.permissions.findMany({
-      where: eq(permissions.code, permissionCodes[0] ?? ''),
-    })
+    // 权限码不足时，检查路由权限白名单（取并集，非仅第一个）
+    const permissionRecords =
+      permissionCodes.length > 0
+        ? await db.query.permissions.findMany({
+            where: and(
+              inArray(permissions.code, permissionCodes),
+              notDeleted(permissions.deletedAt),
+            ),
+          })
+        : []
 
     const allowedRoutes = permissionRecords.flatMap((p) => p.routes ?? [])
 

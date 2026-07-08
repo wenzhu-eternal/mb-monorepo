@@ -37,46 +37,20 @@ MB 全栈 Monorepo 是一个可复用的中后台全栈脚手架，基于 pnpm w
 mb-monorepo/
 ├── apps/
 │   ├── web/                      # 前端 (React 19 + Vite 8 + antd6 + TanStack)
-│   │   ├── src/
-│   │   │   ├── routes/           # TanStack Router 文件式路由
-│   │   │   ├── components/       # 通用组件
-│   │   │   ├── hooks/            # 自定义 hooks
-│   │   │   ├── stores/           # Zustand stores
-│   │   │   └── lib/              # 工具函数
-│   │   ├── vite.config.ts
-│   │   └── tsconfig.json
+│   │   ├── src/{routes,components,hooks,stores,lib}
+│   │   └── vite.config.ts
 │   └── server/                   # 后端 (NestJS 11 + Drizzle + PostgreSQL)
-│       ├── src/
-│       │   ├── modules/          # 业务模块
-│       │   │   ├── auth/         # 认证模块
-│       │   │   ├── users/        # 用户模块
-│       │   │   ├── roles/        # 角色模块
-│       │   │   ├── error-logs/   # 错误日志模块
-│       │   │   └── audit-logs/   # 审计日志模块
-│       │   ├── common/           # 公共模块 (guards, interceptors, filters)
-│       │   ├── db/               # Drizzle schema + 迁移
-│       │   └── config/           # 配置校验 (zod)
-│       ├── drizzle/
-│       ├── drizzle.config.ts
-│       └── tsconfig.json
+│       ├── src/{modules,common,db,config}
+│       └── drizzle/
 ├── packages/
-│   ├── shared/                   # zod schemas + 派生类型 + 常量/错误码
-│   │   └── schemas/
-│   │       ├── user.schema.ts
-│   │       ├── role.schema.ts
-│   │       ├── auth.schema.ts
-│   │       ├── error-log.schema.ts
-│   │       ├── audit-log.schema.ts
-│   │       └── pagination.schema.ts
-│   └── config/                   # 共享 biome/tsconfig
-├── docs/
-│   └── ARCHITECTURE.md
-├── .github/workflows/ci.yml
+│   └── shared/                   # zod schemas + 派生类型 + 常量/错误码
+│       └── schemas/               # user.ts / role.ts / auth.ts / error-log.ts / audit-log.ts / pagination.ts
+├── docs/                          # 技术规范文档
+├── scripts/security-check.sh     # 安全检测脚本
 ├── docker-compose.yml
 ├── pnpm-workspace.yaml
 ├── turbo.json
 ├── biome.json
-├── AGENTS.md
 └── .env.example
 ```
 
@@ -84,70 +58,9 @@ mb-monorepo/
 
 ## 数据库设计
 
-### users 表
+核心业务表：`users` / `roles` / `permissions` / `role_permissions` / `files` / `notifications` / `error_logs` / `error_whitelist` / `audit_logs`。
 
-| 列 | 类型 | 说明 |
-|---|---|---|
-| id | serial PK | 主键 |
-| username | varchar(50) UNIQUE | 用户名 |
-| email | varchar(100) UNIQUE | 邮箱 |
-| password | varchar(255) | argon2 哈希 |
-| nickname | varchar(50) | 昵称 |
-| avatar | varchar(255) | 头像 URL |
-| phone | varchar(20) | 手机号 |
-| role_id | integer FK → roles.id | 角色 ID |
-| status | boolean DEFAULT true | 是否启用 |
-| created_at | timestamp | 创建时间 |
-| updated_at | timestamp | 更新时间 |
-
-### roles 表
-
-| 列 | 类型 | 说明 |
-|---|---|---|
-| id | serial PK | 主键 |
-| name | varchar(50) UNIQUE | 角色名 |
-| description | text | 描述 |
-| created_at | timestamp | 创建时间 |
-| updated_at | timestamp | 更新时间 |
-
-### error_logs 表
-
-| 列 | 类型 | 说明 |
-|---|---|---|
-| id | serial PK | 主键 |
-| message | text | 错误消息 |
-| stack | text | 堆栈信息 |
-| context | jsonb | 上下文信息 |
-| user_id | integer FK → users.id | 操作用户 |
-| ip | varchar(45) | 客户端 IP |
-| user_agent | text | User-Agent |
-| created_at | timestamp | 创建时间 |
-
-### error_whitelist 表
-
-| 列 | 类型 | 说明 |
-|---|---|---|
-| id | serial PK | 主键 |
-| pattern | text | 白名单匹配模式 |
-| description | text | 说明 |
-| is_active | boolean DEFAULT true | 是否启用 |
-| created_at | timestamp | 创建时间 |
-| updated_at | timestamp | 更新时间 |
-
-### audit_logs 表
-
-| 列 | 类型 | 说明 |
-|---|---|---|
-| id | serial PK | 主键 |
-| user_id | integer FK → users.id | 操作用户 |
-| action | varchar(50) | 操作类型 (create/update/delete) |
-| resource | varchar(50) | 资源类型 (user/role/error_whitelist) |
-| resource_id | integer | 资源 ID |
-| old_value | jsonb | 变更前数据 |
-| new_value | jsonb | 变更后数据 |
-| ip | varchar(45) | 客户端 IP |
-| user_agent | text | User-Agent |
-| created_at | timestamp | 创建时间 |
+所有业务表均含 `deleted_at` 软删除字段；`audit_logs` 为 append-only 表例外。详细表结构与字段说明见 [DATABASE.md](./DATABASE.md)。
 
 ---
 
@@ -158,12 +71,12 @@ mb-monorepo/
 - 前缀: `/api/v1`
 - 风格: RESTful
 - 认证: JWT Bearer Token (Authorization: Bearer <access_token>)
-- 响应格式:
+- 统一响应格式（由 `ResponseInterceptor` 包装）：
 
 ```json
 {
-  "code": 0,
-  "message": "success",
+  "code": 200,
+  "message": "成功",
   "data": {}
 }
 ```
@@ -175,22 +88,19 @@ mb-monorepo/
 | POST | /api/v1/auth/login | 登录 | 否 |
 | POST | /api/v1/auth/refresh | 刷新 token | 否 (cookie) |
 | POST | /api/v1/auth/logout | 登出 | 是 |
-| GET | /api/v1/auth/profile | 获取当前用户信息 | 是 |
+| GET | /api/v1/auth/me | 获取当前用户信息 | 是 |
 | GET | /api/v1/health | 健康检查 | 否 |
-| GET | /api/v1/users | 用户列表 | 是 |
-| POST | /api/v1/users | 创建用户 | 是 |
-| GET | /api/v1/users/:id | 用户详情 | 是 |
-| PUT | /api/v1/users/:id | 更新用户 | 是 |
-| DELETE | /api/v1/users/:id | 删除用户 | 是 |
-| GET | /api/v1/roles | 角色列表 | 是 |
-| POST | /api/v1/roles | 创建角色 | 是 |
-| PUT | /api/v1/roles/:id | 更新角色 | 是 |
-| DELETE | /api/v1/roles/:id | 删除角色 | 是 |
+| GET/POST | /api/v1/users | 用户列表/创建 | 是 |
+| GET/PATCH/DELETE | /api/v1/users/:id | 用户详情/更新/删除 | 是 |
+| GET/POST | /api/v1/roles | 角色列表/创建 | 是 |
+| PATCH/DELETE | /api/v1/roles/:id | 角色更新/删除 | 是 |
+| GET/POST | /api/v1/permissions | 权限列表/创建 | 是 |
+| PATCH/DELETE | /api/v1/permissions/:id | 权限更新/删除 | 是 |
+| PUT | /api/v1/role-permissions/role/:roleId | 配置角色权限 | 是 |
 | GET | /api/v1/error-logs | 错误日志列表 | 是 |
+| GET | /api/v1/error-logs/stats | 错误日志统计 | 是 |
 | DELETE | /api/v1/error-logs/:id | 删除错误日志 | 是 |
-| POST | /api/v1/error-whitelist | 创建白名单 | 是 |
-| PUT | /api/v1/error-whitelist/:id | 更新白名单 | 是 |
-| DELETE | /api/v1/error-whitelist/:id | 删除白名单 | 是 |
+| POST/GET/PATCH/DELETE | /api/v1/error-whitelist* | 错误日志白名单 CRUD | 是 (admin) |
 | GET | /api/v1/audit-logs | 审计日志列表 | 是 |
 
 ---

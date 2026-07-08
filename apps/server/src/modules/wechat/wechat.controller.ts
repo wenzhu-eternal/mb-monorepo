@@ -10,11 +10,13 @@ import {
 } from '@nestjs/common'
 import { ApiOperation, ApiTags } from '@nestjs/swagger'
 import type { Response } from 'express'
+import { Public } from '@/common/decorators/public.decorator'
 import { WechatLoginDto } from './dto/wechat-login.dto'
 import { WechatService } from './wechat.service'
 
 @ApiTags('Wechat')
 @Controller('wechat')
+@Public()
 export class WechatController {
   constructor(private readonly wechatService: WechatService) {}
 

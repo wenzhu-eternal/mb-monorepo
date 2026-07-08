@@ -10,12 +10,11 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger'
 import { Permissions } from '@/common/decorators/permissions.decorator'
 import { PermissionsGuard } from '@/common/guards/permissions.guard'
-import { AuthGuard } from '@/modules/auth/auth.guard'
 import { AuditService } from './audit.service'
 
 @ApiTags('Audit')
 @Controller('audit-logs')
-@UseGuards(AuthGuard, PermissionsGuard)
+@UseGuards(PermissionsGuard)
 @ApiBearerAuth()
 export class AuditController {
   constructor(private readonly auditService: AuditService) {}

@@ -17,7 +17,6 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger'
 import { Permissions } from '@/common/decorators/permissions.decorator'
 import { PermissionsGuard } from '@/common/guards/permissions.guard'
-import { AuthGuard } from '@/modules/auth/auth.guard'
 import { CacheInterceptor } from '@/modules/cache/cache.interceptor'
 import { CreateUserDto } from './dto/create-user.dto'
 import { UpdateUserDto } from './dto/update-user.dto'
@@ -25,7 +24,7 @@ import { UsersService } from './users.service'
 
 @ApiTags('Users')
 @Controller('users')
-@UseGuards(AuthGuard, PermissionsGuard)
+@UseGuards(PermissionsGuard)
 @ApiBearerAuth()
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}

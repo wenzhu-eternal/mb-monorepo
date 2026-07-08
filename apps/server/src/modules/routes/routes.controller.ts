@@ -2,13 +2,12 @@ import { Controller, Get, UseGuards } from '@nestjs/common'
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
 import { Roles } from '@/common/decorators/roles.decorator'
 import { RolesGuard } from '@/common/guards/roles.guard'
-import { AuthGuard } from '@/modules/auth/auth.guard'
 import { RoutesService } from './routes.service'
 
 @ApiTags('Routes')
 @ApiBearerAuth()
 @Controller('routes')
-@UseGuards(AuthGuard, RolesGuard)
+@UseGuards(RolesGuard)
 @Roles('admin')
 export class RoutesController {
   constructor(private readonly routesService: RoutesService) {}

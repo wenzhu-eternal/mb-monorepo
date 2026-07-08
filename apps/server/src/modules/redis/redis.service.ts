@@ -1,9 +1,10 @@
-import { Injectable, OnModuleDestroy } from '@nestjs/common'
+import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import Redis from 'ioredis'
 
 @Injectable()
 export class RedisService implements OnModuleDestroy {
+  private readonly logger = new Logger(RedisService.name)
   private readonly client: Redis
 
   constructor(private readonly configService: ConfigService) {
@@ -17,7 +18,7 @@ export class RedisService implements OnModuleDestroy {
       retryStrategy: (times) => Math.min(times * 200, 2000),
     })
     this.client.on('error', (err) => {
-      console.error('[Redis] 连接错误:', err.message)
+      this.logger.error('连接错误:', err.message)
     })
   }
 

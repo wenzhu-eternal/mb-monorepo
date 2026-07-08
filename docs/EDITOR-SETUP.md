@@ -48,9 +48,12 @@
 - 继承 `recommended` preset
 - `noExplicitAny: warn`（不阻断提交，仅警告）
 - `noUnusedImports: warn` + `noUnusedVariables: warn`
+- `noUnusedFunctionParameters: off`（NestJS DI 经常有未用参数）
 - `useImportType: off`（避免 NestJS DI 的类型导入问题）
+- `noNonNullAssertion: off`（NestJS 常见 `!` 断言）
 - 格式化：2 空格 + 单引号 + 无分号 + 行宽 100
-- 包含范围：ts/tsx/js/jsx/json/yaml/md
+- `formatWithErrors: true`（有错误也格式化，保证提交整洁）
+- 包含范围：ts/tsx/js/jsx/json/yaml/yml/md
 
 ## Git Hooks
 
@@ -63,14 +66,7 @@
 pnpm lint-staged
 ```
 
-### commit-msg（Conventional Commits 校验）
-
-```bash
-# .husky/commit-msg
-# 校验提交信息格式：<type>(<scope>): <description>
-```
-
-## lint-staged 配置
+### lint-staged 配置
 
 已落地在 `package.json`：
 
@@ -80,6 +76,8 @@ pnpm lint-staged
   "*.{json,md,yaml,yml}": ["biome format --write"]
 }
 ```
+
+提交信息规范见 [CONVENTIONS.md](./CONVENTIONS.md) 的「提交规范」章节。
 
 ## 常见编辑器对齐
 

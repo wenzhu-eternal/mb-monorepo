@@ -2,6 +2,7 @@ import {
   type CallHandler,
   type ExecutionContext,
   Injectable,
+  Logger,
   type NestInterceptor,
 } from '@nestjs/common'
 import { Reflector } from '@nestjs/core'
@@ -50,6 +51,8 @@ const TABLE_MAP: Record<string, { table: Table; idField: any }> = {
 
 @Injectable()
 export class AuditInterceptor implements NestInterceptor {
+  private readonly logger = new Logger(AuditInterceptor.name)
+
   constructor(
     private readonly reflector: Reflector,
     private readonly auditService: AuditService,
@@ -106,7 +109,7 @@ export class AuditInterceptor implements NestInterceptor {
                 userAgent,
               })
             })
-            .catch((err) => console.error('[Audit] 记录审计日志失败:', err))
+            .catch((err) => this.logger.error('记录审计日志失败:', err))
         }
       }),
     )

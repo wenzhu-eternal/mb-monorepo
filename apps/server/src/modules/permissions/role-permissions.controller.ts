@@ -2,12 +2,11 @@ import { Body, Controller, Get, Param, ParseIntPipe, Put, UseGuards } from '@nes
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
 import { Permissions } from '@/common/decorators/permissions.decorator'
 import { PermissionsGuard } from '@/common/guards/permissions.guard'
-import { AuthGuard } from '@/modules/auth/auth.guard'
 import { RolePermissionsService } from './role-permissions.service'
 
 @ApiTags('RolePermissions')
 @Controller('role-permissions')
-@UseGuards(AuthGuard, PermissionsGuard)
+@UseGuards(PermissionsGuard)
 @ApiBearerAuth()
 export class RolePermissionsController {
   constructor(private readonly rolePermissionsService: RolePermissionsService) {}

@@ -8,13 +8,12 @@ import {
   Req,
   Res,
   UnauthorizedException,
-  UseGuards,
 } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
 import type { Request, Response } from 'express'
 import { CurrentUser } from '@/common/decorators/current-user.decorator'
-import { AuthGuard } from './auth.guard'
+import { Public } from '@/common/decorators/public.decorator'
 import { AuthService, type TokenPayload } from './auth.service'
 import { LoginDto } from './dto/login.dto'
 
@@ -27,6 +26,7 @@ export class AuthController {
   ) {}
 
   @Post('login')
+  @Public()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '用户登录' })
   async login(@Body() loginDto: LoginDto, @Res({ passthrough: true }) response: Response) {
@@ -47,6 +47,7 @@ export class AuthController {
   }
 
   @Post('refresh')
+  @Public()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '刷新访问令牌' })
   async refresh(
@@ -76,7 +77,6 @@ export class AuthController {
   }
 
   @Post('logout')
-  @UseGuards(AuthGuard)
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '用户登出' })
@@ -88,7 +88,6 @@ export class AuthController {
   }
 
   @Get('me')
-  @UseGuards(AuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: '获取当前用户信息' })
   async getProfile(@CurrentUser() user: TokenPayload) {

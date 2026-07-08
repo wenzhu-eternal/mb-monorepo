@@ -81,32 +81,6 @@ export const SendVerificationCodeMailSchema = z.object({
 
 ## ngrok 部署
 
-### 绑定端口
+ngrok 部署的完整流程、关键约束和验证步骤详见 [DEPLOYMENT.md](./DEPLOYMENT.md) 的「ngrok 临时外网部署」章节。
 
-ngrok 隧道必须绑定到后端 `127.0.0.1:9000`，而非前端 vite dev server 3000。
-
-**原因**：后端通过 `ServeStaticModule` 托管前端 dist 静态资源，单一端口同时处理 `/api/*` 路由和前端页面。绑到 3000 会导致 API 路由不可达。
-
-### 部署步骤
-
-```bash
-# 1. 构建前端产物
-pnpm --filter=@mb/web build
-
-# 2. 启动后端（托管前端 dist + 提供 API）
-pnpm --filter=server dev
-
-# 3. 启动 ngrok 隧道（绑后端端口）
-ngrok http 127.0.0.1:9000
-```
-
-### IPv4 绑定
-
-- Vite dev server 必须用 IPv4 `0.0.0.0`，不能用 IPv6 `::1`，避免与 ngrok 的路由问题
-- Vite 配置需 `strictPort: true` 防止端口冲突
-- Vite 还需把 `.ngrok-free.dev` 加入 `allowedHosts` 接受跨源请求
-
-### 验证
-
-- 根路径返回前端 HTML（HTTP 200）
-- `/api/v1/health` 返回 `{"status":"ok","database":"ok","redis":"ok"}`
+**核心要点**：隧道必须绑定 `127.0.0.1:9000`（后端 ServeStaticModule 端口），不能绑 3000（前端 vite dev server）。

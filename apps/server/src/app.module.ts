@@ -9,6 +9,7 @@ import { CommonModule } from './common/common.module'
 import { AuditInterceptor } from './common/interceptors/audit.interceptor'
 import { DatabaseModule } from './db/database.module'
 import { AuditModule } from './modules/audit/audit.module'
+import { AuthGuard } from './modules/auth/auth.guard'
 import { AuthModule } from './modules/auth/auth.module'
 import { CacheModule } from './modules/cache/cache.module'
 import { ErrorLogsModule } from './modules/error-logs/error-logs.module'
@@ -79,6 +80,10 @@ import { WechatModule } from './modules/wechat/wechat.module'
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: AuthGuard,
     },
   ],
 })

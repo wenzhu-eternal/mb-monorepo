@@ -33,40 +33,13 @@
 
 ### 编辑表单白名单提交
 
-1. **禁止 `...values` 全量透传** - `form.setFieldsValue(整个对象)` + `getFieldsValue(true)` 会携带 schema 不允许的额外字段（如 `id`/`username`/`avatar`/`roleName`/`roles`/`createdAt`），触发 Zod 校验失败
-2. **典型坑**：`users.tsx` 编辑用户曾因携带 `avatar`（相对路径）触发 `z.string().url()` 失败，报 "Validation failed"
-3. **正确写法** - 编辑分支必须显式挑 schema 允许字段：
-
-```ts
-if (editingUser) {
-  const updateData: UpdateUser = {
-    email: values.email,
-    nickname: values.nickname,
-    phone: values.phone,
-    roleId: values.roleId,
-    status: values.status,
-  }
-  if (values.password) updateData.password = values.password
-  await updateUser.mutateAsync({ id: editingUser.id, data: updateData })
-}
-```
+- **禁止 `...values` 全量透传**：`form.setFieldsValue(整个对象)` + `getFieldsValue(true)` 会携带 schema 不允许的额外字段（如 `id`/`username`/`avatar`/`roleName`/`roles`/`createdAt`），触发 Zod 校验失败
+- **编辑分支必须显式挑 schema 允许字段**：构造只含可编辑字段的对象后再提交（如 `email`/`nickname`/`phone`/`roleId`/`status`/`password`）
 
 ### Modal 权限回显防覆盖
 
-1. **问题**：`useEffect` 依赖 `[serverData]` 时，`invalidateQueries` 后 server data 返回新引用会覆盖用户本地修改（典型症状：用户配置权限第一次打开选中正确，修改后再打开全部未选中）
-2. **正确写法** - 用 `useRef` 跟踪已加载的 roleId，仅在切换到新角色时同步 server data：
-
-```ts
-const initializedForRoleId = useRef<number | null>(null)
-useEffect(() => {
-  if (selectedRoleId !== null &&
-      initializedForRoleId.current !== selectedRoleId &&
-      currentPermissions) {
-    setSelectedPermissions(currentPermissions)
-    initializedForRoleId.current = selectedRoleId
-  }
-}, [currentPermissions, selectedRoleId])
-```
+- **问题**：`useEffect` 依赖 `[serverData]` 时，`invalidateQueries` 后 server data 返回新引用会覆盖用户本地修改（症状：配置权限第一次打开选中正确，修改后再打开全部未选中）
+- **解法**：用 `useRef` 跟踪已加载的 roleId，仅在切换到新角色时同步 server data，避免重复初始化
 
 ### 删除按钮禁用
 

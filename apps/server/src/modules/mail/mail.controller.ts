@@ -10,14 +10,13 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
 import { Roles } from '@/common/decorators/roles.decorator'
 import { RolesGuard } from '@/common/guards/roles.guard'
-import { AuthGuard } from '@/modules/auth/auth.guard'
 import { SendVerificationCodeMailDto, SendWelcomeMailDto } from './dto/mail.dto'
 import { MailService } from './mail.service'
 
 @ApiTags('Mail')
 @ApiBearerAuth()
 @Controller('mail')
-@UseGuards(AuthGuard, RolesGuard)
+@UseGuards(RolesGuard)
 @Roles('admin')
 export class MailController {
   constructor(private readonly mailService: MailService) {}

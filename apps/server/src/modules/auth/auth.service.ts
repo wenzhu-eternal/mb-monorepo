@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common'
+import { ConflictException, Injectable, Logger, UnauthorizedException } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { JwtService } from '@nestjs/jwt'
 import { ErrorCodes, ErrorMessages } from '@shared/constants/errors'
@@ -27,6 +27,8 @@ const REFRESH_TOKEN_TTL = 7 * 24 * 60 * 60
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name)
+
   constructor(
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
@@ -230,7 +232,7 @@ export class AuthService {
         await this.redisService.set(`refresh:${userId}:${jti}`, '1', REFRESH_TOKEN_TTL)
       }
     } catch (err) {
-      console.error('[Auth] 存储 refreshToken 到 Redis 失败:', err)
+      this.logger.error('存储 refreshToken 到 Redis 失败:', err)
     }
   }
 

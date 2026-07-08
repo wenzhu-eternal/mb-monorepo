@@ -19,6 +19,48 @@
 
 - error-logs 模块的只读接口（findAll/stats/grouped/whitelist）必须 `@SkipThrottle()`，避免 429
 
+## 应用日志规范
+
+### 运行时必须用 NestJS Logger
+
+service / interceptor / guard / resolver / gateway 等**运行时组件**禁止 `console.error/warn/log`，必须用：
+
+```ts
+import { Injectable, Logger } from '@nestjs/common'
+
+@Injectable()
+export class AuthService {
+  private readonly logger = new Logger(AuthService.name)
+
+  async login(...) {
+    try { ... } catch (err) {
+      this.logger.error('登录失败:', err)
+    }
+  }
+}
+```
+
+- 统一输出格式（带 context 命名空间），便于生产 grep 与排障
+- 支持日志级别（`log/warn/error/debug/verbose`），便于按级别过滤
+- 禁止 `console.error('[Xxx] ...')` 自造前缀，context 已由 `new Logger(ClassName.name)` 提供
+
+### 允许 console 的例外
+
+仅在 NestJS Logger 尚未就绪或不能调用的场景使用 `console`：
+
+| 场景 | 文件 | 原因 |
+|---|---|---|
+| bootstrap 启动日志 | `main.ts` | Logger 依赖 DI，bootstrap 阶段未就绪 |
+| 环境变量校验失败 | `config/env.ts` | 校验在 DI 之前执行 |
+| 种子脚本 | `db/seed.ts` | 一次性脚本，不走 DI |
+| FileLogger 自身写入失败兜底 | `common/logger.ts` | 不能递归调用自己 |
+
+### 错误日志文件双写
+
+- `appendErrorLog(message, stack)` 写入 `apps/server/logs/error-YYYY-MM-DD.log`（按天滚动）
+- 作为数据库错误日志的兜底：DB 抖动时不丢日志
+- 文件写入失败时降级到 `console.error`（`logger.ts:36`，唯一允许的 console 兜底）
+
 ### 白名单匹配
 
 - 白名单规则用**字符串包含匹配**（非正则）判断 `message` 或 `url` 字段，避免 ReDoS 风险
@@ -40,21 +82,18 @@ if (Array.isArray(responseObj.issues)) {
     return field + (i.message ?? '')
   }).filter(Boolean).join('; ') || exception.message
 } else if (Array.isArray(responseObj.message)) {
-  // 兼容 v4 及更早版本
-  const issues = responseObj.message as Array<{ message?: string }>
-  message = issues.map((i) => i.message).filter(Boolean).join('; ') || exception.message
+  message = (responseObj.message as Array<{ message?: string }>)
+    .map((i) => i.message).filter(Boolean).join('; ') || exception.message
 } else {
   message = (responseObj.message as string) || exception.message
 }
 ```
 
-不兼容此结构会导致用户只看到无意义的 "Validation failed"，丢失具体字段和错误信息。
-
 ## 前端 catch 块
 
 ### 强制使用 `extractErrorMessage`
 
-禁止 `catch {}` 不读 error。所有异步 catch 必须用 `extractErrorMessage(error, fallback)` 提取后端返回的具体 message：
+禁止 `catch {}` 不读 error。所有异步 catch 必须用 `extractErrorMessage(error, fallback)` 提取后端返回的具体 message（优先级：`axiosError.response?.data?.message` > `error.message` > fallback）：
 
 ```ts
 import { extractErrorMessage } from '@/lib/error'
@@ -66,17 +105,5 @@ try {
 }
 ```
 
-### `extractErrorMessage` 优先级
-
-`axiosError.response?.data?.message`（后端返回）> `error.message`（Error 实例）> fallback 字符串
-
-工具实现位于 `apps/web/src/lib/error.ts`。
-
-### 加载失败统一用 `useEffect` 监听 `isError`
-
-query hook 的 `isError` + `error` 在 useEffect 中弹 toast，不用 `<Alert>` 常驻。
-
-### 操作反馈
-
-- 删除/更新/创建操作必须 `mutateAsync + try/catch`，成功 `messageApi.success`，失败 `messageApi.error(extractErrorMessage(...))`
-- 禁止用 `mutate` 静默调用（吞掉错误）
+- 加载失败统一用 `useEffect` 监听 `isError` 弹 toast，不用 `<Alert>` 常驻
+- 删除/更新/创建操作必须 `mutateAsync + try/catch`，禁止 `mutate` 静默调用

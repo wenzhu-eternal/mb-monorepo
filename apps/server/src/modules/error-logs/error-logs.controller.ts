@@ -18,7 +18,6 @@ import { SkipThrottle } from '@nestjs/throttler'
 import { CurrentUser } from '@/common/decorators/current-user.decorator'
 import { Roles } from '@/common/decorators/roles.decorator'
 import { RolesGuard } from '@/common/guards/roles.guard'
-import { AuthGuard } from '@/modules/auth/auth.guard'
 import { CreateWhitelistDto } from './dto/create-whitelist.dto'
 import { UpdateWhitelistDto } from './dto/update-whitelist.dto'
 import { ErrorLogsService } from './error-logs.service'
@@ -56,7 +55,7 @@ export class ErrorLogsController {
   // ===== 需要 admin 权限的接口 =====
 
   @Get()
-  @UseGuards(AuthGuard, RolesGuard)
+  @UseGuards(RolesGuard)
   @ApiBearerAuth()
   @Roles('admin')
   @ApiOperation({ summary: '分页查询错误日志（仅管理员）' })
@@ -84,7 +83,7 @@ export class ErrorLogsController {
   }
 
   @Get('stats')
-  @UseGuards(AuthGuard, RolesGuard)
+  @UseGuards(RolesGuard)
   @ApiBearerAuth()
   @Roles('admin')
   @ApiOperation({ summary: '错误统计（仅管理员）' })
@@ -93,7 +92,7 @@ export class ErrorLogsController {
   }
 
   @Get('grouped')
-  @UseGuards(AuthGuard, RolesGuard)
+  @UseGuards(RolesGuard)
   @ApiBearerAuth()
   @Roles('admin')
   @ApiOperation({ summary: '相同报错聚合 Top N（仅管理员）' })
@@ -107,7 +106,7 @@ export class ErrorLogsController {
   }
 
   @Get('whitelist')
-  @UseGuards(AuthGuard, RolesGuard)
+  @UseGuards(RolesGuard)
   @ApiBearerAuth()
   @Roles('admin')
   @ApiOperation({ summary: '查询全部白名单（仅管理员）' })
@@ -116,7 +115,7 @@ export class ErrorLogsController {
   }
 
   @Get(':id')
-  @UseGuards(AuthGuard, RolesGuard)
+  @UseGuards(RolesGuard)
   @ApiBearerAuth()
   @Roles('admin')
   @ApiOperation({ summary: '按ID查询错误日志（仅管理员）' })
@@ -125,7 +124,7 @@ export class ErrorLogsController {
   }
 
   @Post(':id/resolve')
-  @UseGuards(AuthGuard, RolesGuard)
+  @UseGuards(RolesGuard)
   @ApiBearerAuth()
   @Roles('admin')
   @HttpCode(HttpStatus.OK)
@@ -135,7 +134,7 @@ export class ErrorLogsController {
   }
 
   @Post('batch-resolve')
-  @UseGuards(AuthGuard, RolesGuard)
+  @UseGuards(RolesGuard)
   @ApiBearerAuth()
   @Roles('admin')
   @HttpCode(HttpStatus.OK)
@@ -151,7 +150,7 @@ export class ErrorLogsController {
   }
 
   @Delete(':id')
-  @UseGuards(AuthGuard, RolesGuard)
+  @UseGuards(RolesGuard)
   @ApiBearerAuth()
   @Roles('admin')
   @HttpCode(HttpStatus.OK)
@@ -163,7 +162,7 @@ export class ErrorLogsController {
   // ===== 白名单 CRUD =====
 
   @Post('whitelist')
-  @UseGuards(AuthGuard, RolesGuard)
+  @UseGuards(RolesGuard)
   @ApiBearerAuth()
   @Roles('admin')
   @HttpCode(HttpStatus.CREATED)
@@ -173,7 +172,7 @@ export class ErrorLogsController {
   }
 
   @Patch('whitelist/:id')
-  @UseGuards(AuthGuard, RolesGuard)
+  @UseGuards(RolesGuard)
   @ApiBearerAuth()
   @Roles('admin')
   @ApiOperation({ summary: '更新白名单规则（仅管理员）' })
@@ -182,7 +181,7 @@ export class ErrorLogsController {
   }
 
   @Delete('whitelist/:id')
-  @UseGuards(AuthGuard, RolesGuard)
+  @UseGuards(RolesGuard)
   @ApiBearerAuth()
   @Roles('admin')
   @HttpCode(HttpStatus.OK)

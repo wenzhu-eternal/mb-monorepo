@@ -43,8 +43,11 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/apps/server/node_modules ./apps/server/node_modules
 COPY --from=builder /app/packages/shared/node_modules ./packages/shared/node_modules
 
-ENV API_PORT=80
-EXPOSE 80
+ENV API_PORT=9000
+EXPOSE 9000
+
+# 非 root 运行，遵循最小权限原则
+USER node
 
 ENTRYPOINT ["/sbin/tini", "--"]
 CMD ["node", "apps/server/dist/main.js"]

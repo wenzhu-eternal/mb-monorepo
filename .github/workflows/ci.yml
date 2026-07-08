@@ -19,6 +19,31 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
 
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter=server exec tsc --noEmit
+      - run: pnpm --filter=web exec tsc --noEmit
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: bash scripts/security-check.sh
+
   test:
     runs-on: ubuntu-latest
     services:
@@ -36,8 +61,8 @@ jobs:
     env:
       DATABASE_URL: postgresql://test:test@localhost:5432/test_db
       REDIS_URL: redis://localhost:6379
-      JWT_SECRET: test-jwt-secret-for-ci-only-16chars
-      JWT_REFRESH_SECRET: test-jwt-refresh-secret-for-ci
+      JWT_SECRET: ci-jwt-secret-must-be-at-least-32-chars-long-xyz
+      JWT_REFRESH_SECRET: ci-jwt-refresh-secret-must-be-at-least-32-chars-long-xyz
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v2
@@ -50,6 +75,7 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
+    needs: [lint, typecheck, security, test]
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v2

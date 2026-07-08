@@ -1,8 +1,7 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Post, UseGuards } from '@nestjs/common'
+import { Body, Controller, Get, HttpCode, HttpStatus, Post } from '@nestjs/common'
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
 import { SkipThrottle } from '@nestjs/throttler'
 import { CurrentUser } from '@/common/decorators/current-user.decorator'
-import { AuthGuard } from '@/modules/auth/auth.guard'
 import { type TokenPayload } from '@/modules/auth/auth.service'
 import { NotificationsService } from '@/modules/notifications/notifications.service'
 import { NotifyDto } from './dto/notify.dto'
@@ -11,7 +10,6 @@ import { EventsService } from './events.service'
 @ApiTags('WebSocket')
 @ApiBearerAuth()
 @Controller('websocket')
-@UseGuards(AuthGuard)
 export class WebsocketController {
   constructor(
     private readonly eventsService: EventsService,

@@ -54,12 +54,11 @@ pnpm --filter=web test:cov
 不是全量 e2e，而是**部署后快速验证核心功能可用**的冒烟用例。覆盖：
 
 1. **健康检查**：`/api/v1/health` 返回 200
-2. **认证**：login 成功返回 access_token，错误密码 401
-3. **CRUD**：users/roles/permissions 的 list/create/update/delete 全流程
-4. **权限**：无权限访问返回 403
-5. **错误日志**：500 错误能被记录到数据库
-6. **文件上传**：上传/下载/删除全流程
-7. **邮件**：发送验证码邮件（mock 传输器）
+2. **认证**：login 成功返回 access_token，错误密码 401；`/auth/me` 返回当前用户
+3. **CRUD**：users/roles/permissions 的 list/create/delete 全流程
+4. **Zod 校验**：缺字段返回 400 + issues 字段
+5. **权限保护**：无 token 访问受保护接口返回 401
+6. **限流**：`@SkipThrottle()` 装饰的接口不被限流
 
 ### 运行
 
@@ -124,11 +123,12 @@ pnpm security   # 等价于 bash scripts/security-check.sh
 
 1. **TypeScript 类型检查**：`pnpm -r exec tsc --noEmit`
 2. **Biome lint**：`pnpm lint`
-3. **软删除过滤审计**：扫描所有 service 是否有 `findFirst/findMany/select` 缺 `notDeleted`
+3. **软删除过滤审计**：扫描所有 service 是否有 `findFirst/findMany/count()` 缺 `notDeleted`
 4. **前端 catch 块审计**：扫描所有 `.tsx` 是否有 `catch {}` 不读 error
 5. **环境变量完整性**：对比 `.env` 与 `.env.example` 关键变量
 6. **依赖安全扫描**：`pnpm audit --prod`
 7. **文档链接有效性**：检查所有 markdown 内部链接指向真实文件
+8. **Zod DTO 桥接审计**：扫描 controller 是否有裸 `@Body()`
 
 ## 测试数据管理
 

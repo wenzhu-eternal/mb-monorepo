@@ -21,12 +21,11 @@ import type { Response } from 'express'
 import { CurrentUser } from '@/common/decorators/current-user.decorator'
 import { Permissions } from '@/common/decorators/permissions.decorator'
 import { PermissionsGuard } from '@/common/guards/permissions.guard'
-import { AuthGuard } from '@/modules/auth/auth.guard'
 import { FilesService, UPLOAD_DIR } from './files.service'
 
 @ApiTags('Files')
 @Controller('files')
-@UseGuards(AuthGuard, PermissionsGuard)
+@UseGuards(PermissionsGuard)
 @ApiBearerAuth()
 export class FilesController {
   constructor(private readonly filesService: FilesService) {}

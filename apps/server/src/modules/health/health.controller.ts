@@ -1,10 +1,12 @@
 import { Controller, Get, HttpCode, HttpStatus, ServiceUnavailableException } from '@nestjs/common'
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger'
 import { SkipThrottle } from '@nestjs/throttler'
+import { Public } from '@/common/decorators/public.decorator'
 import { HealthService } from './health.service'
 
 @ApiTags('Health')
 @Controller('health')
+@Public()
 @SkipThrottle() // 健康检查不被限流，避免探针误判
 export class HealthController {
   constructor(private readonly healthService: HealthService) {}

@@ -1,10 +1,12 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Post } from '@nestjs/common'
 import { ApiOperation, ApiTags } from '@nestjs/swagger'
+import { Public } from '@/common/decorators/public.decorator'
 import { SetupDto } from './dto/setup.dto'
 import { SetupService } from './setup.service'
 
 @ApiTags('Setup')
 @Controller('setup')
+@Public()
 export class SetupController {
   constructor(private readonly setupService: SetupService) {}
 
