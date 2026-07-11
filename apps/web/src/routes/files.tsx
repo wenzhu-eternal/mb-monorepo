@@ -179,7 +179,7 @@ function FilesPage() {
           <Space size={0}>
             {actions.map((item, i) => (
               <span key={item.key} style={{ display: 'inline-flex', alignItems: 'center' }}>
-                {i > 0 && <Divider type="vertical" style={{ margin: '0 4px' }} />}
+                {i > 0 && <Divider orientation="vertical" style={{ margin: '0 4px' }} />}
                 {item.node}
               </span>
             ))}
@@ -230,9 +230,9 @@ function FilesPage() {
         <Image
           src={previewUrl}
           preview={{
-            visible: true,
-            onVisibleChange: (visible) => {
-              if (!visible) closePreview()
+            open: true,
+            onOpenChange: (open) => {
+              if (!open) closePreview()
             },
           }}
           style={{ display: 'none' }}

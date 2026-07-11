@@ -71,7 +71,7 @@ export function useWebSocketDemo() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
   const [receivedNotifications, setReceivedNotifications] = useState<Notification[]>([])
 
-  // 在线用户列表
+  // 在线用户列表（首次拉取基线，之后由 presence:update 事件增量更新）
   const onlineQuery = useQuery({
     queryKey: ['websocket', 'online'],
     queryFn: async () => {
@@ -79,7 +79,6 @@ export function useWebSocketDemo() {
       return response.data.data!
     },
     enabled: isAuthenticated,
-    refetchInterval: isAuthenticated ? 10000 : false,
   })
 
   // 当前用户在线状态
@@ -90,7 +89,6 @@ export function useWebSocketDemo() {
       return response.data.data!
     },
     enabled: isAuthenticated,
-    refetchInterval: isAuthenticated ? 10000 : false,
   })
 
   // 监听实时推送
@@ -104,6 +102,38 @@ export function useWebSocketDemo() {
       wsClient.off('notification', onNotification)
     }
   }, [])
+
+  // 订阅 presence:update 事件，实时更新在线状态（替代 10s 轮询）
+  useEffect(() => {
+    if (!isAuthenticated) return
+
+    const onPresenceUpdate = (data: unknown) => {
+      const { userId, online } = data as { userId: number; online: boolean }
+
+      // 增量更新在线用户列表
+      queryClient.setQueryData<OnlineResponse>(['websocket', 'online'], (old) => {
+        if (!old) return old
+        const set = new Set(old.userIds)
+        if (online) {
+          set.add(userId)
+        } else {
+          set.delete(userId)
+        }
+        return { count: set.size, userIds: Array.from(set) }
+      })
+
+      // 增量更新当前用户在线状态
+      queryClient.setQueryData<MeResponse>(['websocket', 'me'], (old) => {
+        if (!old) return old
+        return old.userId === userId ? { ...old, online } : old
+      })
+    }
+
+    wsClient.on('presence:update', onPresenceUpdate)
+    return () => {
+      wsClient.off('presence:update', onPresenceUpdate)
+    }
+  }, [isAuthenticated, queryClient])
 
   // 发送测试通知
   const sendNotify = useMutation({

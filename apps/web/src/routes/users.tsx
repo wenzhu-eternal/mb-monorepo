@@ -103,7 +103,7 @@ function UsersPage() {
                 disabled={isAdmin}
                 onConfirm={() => handleDelete(record.id)}
               >
-                <Button type="link" danger>
+                <Button type="link" danger disabled={isAdmin}>
                   删除
                 </Button>
               </Popconfirm>
@@ -114,7 +114,7 @@ function UsersPage() {
           <Space size={0}>
             {actions.map((item, i) => (
               <span key={item.key} style={{ display: 'inline-flex', alignItems: 'center' }}>
-                {i > 0 && <Divider type="vertical" style={{ margin: '0 4px' }} />}
+                {i > 0 && <Divider orientation="vertical" style={{ margin: '0 4px' }} />}
                 {item.node}
               </span>
             ))}
@@ -126,9 +126,14 @@ function UsersPage() {
 
   const handleEdit = (user: User) => {
     setEditingUser(user)
+    // 仅写入表单需要的字段，避免 avatar/roles/permissions/createdAt 等污染 form store
     form.setFieldsValue({
-      ...user,
+      username: user.username,
+      email: user.email,
+      nickname: user.nickname,
+      phone: user.phone,
       roleId: user.roles?.[0]?.id,
+      status: user.status,
     })
     setIsModalOpen(true)
   }
@@ -161,7 +166,16 @@ function UsersPage() {
         await updateUser.mutateAsync({ id: editingUser.id, data: updateData })
         messageApi.success('更新成功')
       } else {
-        await createUser.mutateAsync(values as CreateUser)
+        // 新建时同样白名单挑字段，避免残留字段触发 Zod 校验失败
+        const createData: CreateUser = {
+          username: values.username,
+          email: values.email,
+          password: values.password,
+          nickname: values.nickname,
+          phone: values.phone,
+          roleId: values.roleId as number,
+        }
+        await createUser.mutateAsync(createData)
         messageApi.success('创建成功')
       }
       setIsModalOpen(false)
@@ -225,7 +239,10 @@ function UsersPage() {
               <Form.Item
                 name="username"
                 label="用户名"
-                rules={[{ required: true, message: '请输入用户名' }]}
+                rules={[
+                  { required: true, message: '请输入用户名' },
+                  { min: 3, max: 50, message: '用户名 3-50 个字符' },
+                ]}
               >
                 <Input />
               </Form.Item>
@@ -270,8 +287,12 @@ function UsersPage() {
           <Form.Item name="nickname" label="昵称">
             <Input />
           </Form.Item>
-          <Form.Item name="phone" label="手机号">
-            <Input />
+          <Form.Item
+            name="phone"
+            label="手机号"
+            rules={[{ pattern: /^1[3-9]\d{9}$/, message: '手机号格式不正确' }]}
+          >
+            <Input placeholder="选填" />
           </Form.Item>
           <Form.Item name="roleId" label="角色" rules={[{ required: true, message: '请选择角色' }]}>
             <Select

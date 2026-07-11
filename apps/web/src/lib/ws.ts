@@ -4,14 +4,16 @@ import { env } from './env'
 /**
  * WebSocket 单例客户端
  * - 鉴权: auth.token = <accessToken>（后端网关解析 JWT）
- * - 心跳: 30s 一次 ping，服务端 pong
+ * - 心跳: 10s 一次 ping，pong 超时主动重连
  * - 断线重连: 指数退避，最多 5 次
  */
 class WsClient {
   private socket: Socket | null = null
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null
+  private pongTimer: ReturnType<typeof setTimeout> | null = null
   private static readonly MAX_RECONNECT = 5
-  private static readonly HEARTBEAT_INTERVAL = 30_000
+  private static readonly HEARTBEAT_INTERVAL = 10_000
+  private static readonly PONG_TIMEOUT = 5_000
 
   connect(token: string): Socket {
     if (this.socket?.connected) {
@@ -37,6 +39,14 @@ class WsClient {
 
     this.socket.on('disconnect', () => {
       this.stopHeartbeat()
+    })
+
+    // pong 回应后清除超时计时器
+    this.socket.on('pong', () => {
+      if (this.pongTimer) {
+        clearTimeout(this.pongTimer)
+        this.pongTimer = null
+      }
     })
 
     this.socket.io.on('reconnect_attempt', (attempt) => {
@@ -84,6 +94,11 @@ class WsClient {
     this.stopHeartbeat()
     this.heartbeatTimer = setInterval(() => {
       this.socket?.emit('ping', { t: Date.now() })
+      // 5s 内没收到 pong，主动断开触发重连
+      this.pongTimer = setTimeout(() => {
+        console.warn('[WS] pong 超时，主动断开重连')
+        this.socket?.disconnect()
+      }, WsClient.PONG_TIMEOUT)
     }, WsClient.HEARTBEAT_INTERVAL)
   }
 
@@ -91,6 +106,10 @@ class WsClient {
     if (this.heartbeatTimer) {
       clearInterval(this.heartbeatTimer)
       this.heartbeatTimer = null
+    }
+    if (this.pongTimer) {
+      clearTimeout(this.pongTimer)
+      this.pongTimer = null
     }
   }
 }

@@ -57,7 +57,7 @@ function MailPage() {
       {contextHolder}
       <Title level={3}>邮件发送</Title>
 
-      <Space direction="vertical" size="large" style={{ width: '100%', maxWidth: 640 }}>
+      <Space orientation="vertical" size="large" style={{ width: '100%', maxWidth: 640 }}>
         <div>
           <Text strong>邮件类型</Text>
           <div style={{ marginTop: 8 }}>

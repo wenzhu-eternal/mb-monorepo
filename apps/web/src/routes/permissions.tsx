@@ -44,7 +44,12 @@ function PermissionsPage() {
   const [messageApi, contextHolder] = message.useMessage()
 
   const { data, isLoading, isError, error } = usePermissions({ page, pageSize })
-  const { data: allRoutes } = useRoutes()
+  const {
+    data: allRoutes,
+    isError: routesError,
+    error: routesErr,
+    isLoading: routesLoading,
+  } = useRoutes()
   const createPermission = useCreatePermission()
   const updatePermission = useUpdatePermission()
   const deletePermission = useDeletePermission()
@@ -56,6 +61,12 @@ function PermissionsPage() {
       messageApi.error(`加载失败: ${(error as Error)?.message ?? '未知错误'}`)
     }
   }, [isError, error, messageApi])
+
+  useEffect(() => {
+    if (routesError) {
+      messageApi.error(`路由加载失败: ${(routesErr as Error)?.message ?? '未知错误'}`)
+    }
+  }, [routesError, routesErr, messageApi])
 
   const columns: ColumnsType<Permission> = [
     { title: 'ID', dataIndex: 'id', key: 'id' },
@@ -123,7 +134,7 @@ function PermissionsPage() {
           <Space size={0}>
             {actions.map((item, i) => (
               <span key={item.key} style={{ display: 'inline-flex', alignItems: 'center' }}>
-                {i > 0 && <Divider type="vertical" style={{ margin: '0 4px' }} />}
+                {i > 0 && <Divider orientation="vertical" style={{ margin: '0 4px' }} />}
                 {item.node}
               </span>
             ))}
@@ -273,26 +284,36 @@ function PermissionsPage() {
         width={800}
       >
         <div className="max-h-96 overflow-y-auto">
-          {allRoutes?.map((route: RouteMeta) => (
-            <div key={`${route.method} ${route.path}`} className="py-1">
-              <Checkbox
-                checked={selectedRoutes.includes(`${route.method} ${route.path}`)}
-                onChange={(e) =>
-                  handleRouteToggle(`${route.method} ${route.path}`, e.target.checked)
-                }
-              >
-                <span className="font-mono text-sm">
-                  <span className="text-blue-600">{route.method}</span>{' '}
-                  <span className="text-gray-800">{route.path}</span>
-                </span>
-                <span className="text-gray-400 text-xs ml-2">
-                  ({route.controller}.{route.handlerName})
-                </span>
-              </Checkbox>
+          {routesLoading ? (
+            <div className="text-center text-gray-500 py-4">路由加载中...</div>
+          ) : routesError ? (
+            <div className="text-center text-red-500 py-4">
+              路由加载失败：{(routesErr as Error)?.message ?? '未知错误'}
             </div>
-          ))}
-          {(!allRoutes || allRoutes.length === 0) && (
-            <div className="text-center text-gray-500 py-4">暂无可用路由</div>
+          ) : (
+            <>
+              {allRoutes?.map((route: RouteMeta) => (
+                <div key={`${route.method} ${route.path}`} className="py-1">
+                  <Checkbox
+                    checked={selectedRoutes.includes(`${route.method} ${route.path}`)}
+                    onChange={(e) =>
+                      handleRouteToggle(`${route.method} ${route.path}`, e.target.checked)
+                    }
+                  >
+                    <span className="font-mono text-sm">
+                      <span className="text-blue-600">{route.method}</span>{' '}
+                      <span className="text-gray-800">{route.path}</span>
+                    </span>
+                    <span className="text-gray-400 text-xs ml-2">
+                      ({route.controller}.{route.handlerName})
+                    </span>
+                  </Checkbox>
+                </div>
+              ))}
+              {(!allRoutes || allRoutes.length === 0) && (
+                <div className="text-center text-gray-500 py-4">暂无可用路由</div>
+              )}
+            </>
           )}
         </div>
       </Modal>

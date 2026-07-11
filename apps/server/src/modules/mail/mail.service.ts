@@ -39,17 +39,24 @@ export class MailService {
   }
 
   private loadTemplates(): void {
-    const templateDir = join(__dirname, 'templates', 'email')
+    // dev: process.cwd() = apps/server/ → src/templates/email
+    // prod: process.cwd() = apps/server/ → dist/templates/email（由 nest-cli.json assets 复制）
+    const isProd = this.configService.get<string>('NODE_ENV') === 'production'
+    const templateDir = join(process.cwd(), isProd ? 'dist' : 'src', 'templates', 'email')
     const templateNames = ['welcome', 'verification', 'backup']
 
     for (const name of templateNames) {
       try {
         const content = readFileSync(join(templateDir, `${name}.hbs`), 'utf-8')
         this.templates.set(name, Handlebars.compile(content))
-      } catch {
-        this.logger.warn(`邮件模板 ${name}.hbs 加载失败`)
+      } catch (err) {
+        // fail-fast: 模板缺失属严重配置错误，必须抛出避免静默降级
+        throw new Error(
+          `邮件模板 ${name}.hbs 加载失败 (查找路径: ${templateDir}): ${err instanceof Error ? err.message : String(err)}`,
+        )
       }
     }
+    this.logger.log(`已加载 ${this.templates.size} 个邮件模板`)
   }
 
   /**

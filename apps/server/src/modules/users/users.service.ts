@@ -118,7 +118,7 @@ export class UsersService {
     })
 
     if (existingUsername) {
-      throw new ConflictException(ErrorMessages[ErrorCodes.USER_ALREADY_EXISTS])
+      throw new ConflictException('用户名已存在，请更换用户名')
     }
 
     const existingEmail = await db.query.users.findFirst({
@@ -126,7 +126,7 @@ export class UsersService {
     })
 
     if (existingEmail) {
-      throw new ConflictException(ErrorMessages[ErrorCodes.USER_ALREADY_EXISTS])
+      throw new ConflictException('邮箱已被注册，请更换邮箱')
     }
 
     const hashedPassword = await argon2.hash(data.password)
@@ -149,7 +149,7 @@ export class UsersService {
     } catch (error) {
       // TOCTOU 兜底: 并发场景下唯一约束冲突转 409
       if (isUniqueViolation(error)) {
-        throw new ConflictException(ErrorMessages[ErrorCodes.USER_ALREADY_EXISTS])
+        throw new ConflictException('用户名或邮箱已存在（并发冲突）')
       }
       throw error
     }
@@ -181,7 +181,7 @@ export class UsersService {
         where: and(eq(users.email, data.email), notDeleted(users.deletedAt)),
       })
       if (duplicateEmail) {
-        throw new ConflictException(ErrorMessages[ErrorCodes.USER_ALREADY_EXISTS])
+        throw new ConflictException('邮箱已被其他用户使用，请更换邮箱')
       }
     }
 
@@ -207,7 +207,7 @@ export class UsersService {
     } catch (error) {
       // TOCTOU 兜底: 并发场景下 email 唯一约束冲突转 409
       if (isUniqueViolation(error)) {
-        throw new ConflictException(ErrorMessages[ErrorCodes.USER_ALREADY_EXISTS])
+        throw new ConflictException('邮箱已被注册（并发冲突）')
       }
       throw error
     } finally {

@@ -128,6 +128,28 @@ mb-monorepo/
 
 ---
 
+## WebSocket 架构
+
+### 心跳探测
+
+- 服务端 `@WebSocketGateway` 显式配置 `pingInterval: 10000` + `pingTimeout: 5000`
+- 默认 25s+20s=45s 太慢，用户离线感知延迟过长
+- 配置后最坏离线感知从 45s 降到 15s
+
+### 在线状态实时推送
+
+- 后端 `handleConnection`/`handleDisconnect` 在用户首次上线/全部断开时广播 `presence:update` 事件
+- 前端 `use-websocket.ts` 订阅 `presence:update` 事件，用 `queryClient.setQueryData` 增量更新
+- **不再走 10s HTTP 轮询**，状态变更 <1s 到达 UI
+
+### 前端应用层心跳
+
+- `ws.ts` 的 `HEARTBEAT_INTERVAL = 10_000`（10s 一次 ping）
+- 加 pong 超时检测：5s 内未收到 pong 主动 `socket.disconnect()` 触发重连
+- 重连指数退避：1s/2s/4s/8s/10s，最多 5 次
+
+---
+
 ## 前端架构
 
 ### 路由 (TanStack Router)

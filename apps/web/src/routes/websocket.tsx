@@ -9,7 +9,6 @@ import {
   Form,
   Input,
   InputNumber,
-  List,
   message,
   Row,
   Space,
@@ -175,30 +174,22 @@ function WebSocketPage() {
                 description="给自己发一条通知试试（上方表单填你的用户 ID），如果在线会立即显示在这里。"
               />
             ) : (
-              <List
-                size="small"
-                dataSource={receivedNotifications}
-                renderItem={(n) => (
-                  <List.Item>
-                    <List.Item.Meta
-                      title={
-                        <Space>
-                          <Tag color="blue">{n.type}</Tag>
-                          <span>{n.title}</span>
-                        </Space>
-                      }
-                      description={
-                        <div>
-                          {n.content && <div className="text-sm">{n.content}</div>}
-                          <div className="text-xs text-gray-400">
-                            {dayjs(n.createdAt).format('YYYY-MM-DD HH:mm:ss')}
-                          </div>
-                        </div>
-                      }
-                    />
-                  </List.Item>
-                )}
-              />
+              <div className="divide-y divide-gray-100">
+                {receivedNotifications.map((n) => (
+                  <div key={n.id} className="py-2">
+                    <Space>
+                      <Tag color="blue">{n.type}</Tag>
+                      <span className="font-medium">{n.title}</span>
+                    </Space>
+                    <div className="mt-1">
+                      {n.content && <div className="text-sm">{n.content}</div>}
+                      <div className="text-xs text-gray-400">
+                        {dayjs(n.createdAt).format('YYYY-MM-DD HH:mm:ss')}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
           </Card>
         </Col>

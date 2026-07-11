@@ -9,7 +9,6 @@ import {
   Empty,
   Form,
   Input,
-  List,
   Modal,
   message,
   Popconfirm,
@@ -233,7 +232,7 @@ function LogsTab() {
           <Space size={0}>
             {actions.map((item, i) => (
               <span key={item.key} style={{ display: 'inline-flex', alignItems: 'center' }}>
-                {i > 0 && <Divider type="vertical" style={{ margin: '0 4px' }} />}
+                {i > 0 && <Divider orientation="vertical" style={{ margin: '0 4px' }} />}
                 {item.node}
               </span>
             ))}
@@ -258,21 +257,21 @@ function LogsTab() {
               <Statistic
                 title="未处理"
                 value={stats.unresolved}
-                valueStyle={{ color: '#cf1322' }}
+                styles={{ content: { color: '#cf1322' } }}
               />
             </Col>
             <Col span={6}>
               <Statistic
                 title="前端错误"
                 value={stats.bySource.frontend ?? 0}
-                valueStyle={{ color: '#1677ff' }}
+                styles={{ content: { color: '#1677ff' } }}
               />
             </Col>
             <Col span={6}>
               <Statistic
                 title="后端错误"
                 value={stats.bySource.backend ?? 0}
-                valueStyle={{ color: '#cf1322' }}
+                styles={{ content: { color: '#cf1322' } }}
               />
             </Col>
           </Row>
@@ -289,32 +288,13 @@ function LogsTab() {
               key: 'grouped',
               label: `相似错误聚合 Top 10（共 ${grouped.length} 组）`,
               children: (
-                <List
-                  size="small"
-                  dataSource={grouped}
-                  renderItem={(item: ErrorLogGroup) => (
-                    <List.Item
-                      actions={[
-                        <Button
-                          key="view"
-                          type="link"
-                          size="small"
-                          onClick={() => handleViewGroupDetails(item)}
-                        >
-                          查看详情
-                        </Button>,
-                        <Popconfirm
-                          key="batch-resolve"
-                          title={`确认将这 ${item.count} 条相同错误全部标记为已处理？`}
-                          onConfirm={() => handleBatchResolve(item)}
-                        >
-                          <Button type="link" size="small" loading={batchResolveMutation.isPending}>
-                            全部已处理
-                          </Button>
-                        </Popconfirm>,
-                      ]}
+                <div className="divide-y divide-gray-100">
+                  {grouped.map((item: ErrorLogGroup) => (
+                    <div
+                      key={`${item.source}-${item.message}`}
+                      className="flex items-center justify-between py-2"
                     >
-                      <Space style={{ width: '100%' }} direction="vertical" size={0}>
+                      <Space orientation="vertical" style={{ width: '100%' }} size={0}>
                         <Space>
                           <Tag color={item.source === 'frontend' ? 'blue' : 'red'}>
                             {item.source === 'frontend' ? '前端' : '后端'}
@@ -330,9 +310,26 @@ function LogsTab() {
                           {item.sampleId}
                         </Text>
                       </Space>
-                    </List.Item>
-                  )}
-                />
+                      <Space>
+                        <Button
+                          type="link"
+                          size="small"
+                          onClick={() => handleViewGroupDetails(item)}
+                        >
+                          查看详情
+                        </Button>
+                        <Popconfirm
+                          title={`确认将这 ${item.count} 条相同错误全部标记为已处理？`}
+                          onConfirm={() => handleBatchResolve(item)}
+                        >
+                          <Button type="link" size="small" loading={batchResolveMutation.isPending}>
+                            全部已处理
+                          </Button>
+                        </Popconfirm>
+                      </Space>
+                    </div>
+                  ))}
+                </div>
               ),
             },
           ]}
@@ -404,7 +401,7 @@ function LogsTab() {
 
       <Drawer title="错误详情" open={!!selectedLog} onClose={() => setSelectedLog(null)} size={640}>
         {selectedLog && (
-          <Space direction="vertical" style={{ width: '100%' }}>
+          <Space orientation="vertical" style={{ width: '100%' }}>
             <div>
               <Text strong>来源：</Text>
               <Tag color={selectedLog.source === 'frontend' ? 'blue' : 'red'}>
@@ -660,7 +657,7 @@ function WhitelistTab() {
           <Space size={0}>
             {actions.map((item, i) => (
               <span key={item.key} style={{ display: 'inline-flex', alignItems: 'center' }}>
-                {i > 0 && <Divider type="vertical" style={{ margin: '0 4px' }} />}
+                {i > 0 && <Divider orientation="vertical" style={{ margin: '0 4px' }} />}
                 {item.node}
               </span>
             ))}
@@ -696,7 +693,7 @@ function WhitelistTab() {
         onOk={handleSubmit}
         onCancel={() => setModalOpen(false)}
         confirmLoading={createMutation.isPending || updateMutation.isPending}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form<WhitelistFormValues> form={form} layout="vertical">
           <Form.Item

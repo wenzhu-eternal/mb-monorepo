@@ -4,6 +4,8 @@
   "sourceRoot": "src",
   "compilerOptions": {
     "deleteOutDir": true,
-    "entries": ["src/main.ts"]
+    "entries": ["src/main.ts"],
+    "assets": [{ "include": "templates/email/*.hbs", "outDir": "dist" }],
+    "watchAssets": true
   }
 }

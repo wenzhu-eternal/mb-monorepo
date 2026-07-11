@@ -73,7 +73,17 @@ export const SendVerificationCodeMailSchema = z.object({
 ### 错误处理
 
 - `mail.service` 的 `send`/`sendHtml` catch 必须 `throw new Error(...)`，不能吞错
+- `loadTemplates` 的 catch 同样必须抛错（fail-fast），模板缺失属严重配置错误，不能静默降级
 - 让上层 controller 处理响应和 toast
+
+### 邮件模板路径
+
+- 模板文件位于 `apps/server/src/templates/email/*.hbs`（Handlebars）
+- `mail.service` 用 `process.cwd()` + `NODE_ENV` 判断查找路径：
+  - dev：`{cwd}/src/templates/email/`
+  - prod：`{cwd}/dist/templates/email/`（由 `nest-cli.json` 的 `assets` 配置复制）
+- `nest-cli.json` 必须配置 `assets: [{ "include": "templates/email/*.hbs", "outDir": "dist" }]`，否则生产构建后模板丢失
+- 生产部署时 Docker/PM2 的 `WORKDIR` 必须是 `apps/server/`，否则 `process.cwd()` 路径失效
 
 ### 端口强转
 

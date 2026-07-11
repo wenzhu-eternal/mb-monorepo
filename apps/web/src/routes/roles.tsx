@@ -150,7 +150,7 @@ function RolesPage() {
           <Space size={0}>
             {actions.map((item, i) => (
               <span key={item.key} style={{ display: 'inline-flex', alignItems: 'center' }}>
-                {i > 0 && <Divider type="vertical" style={{ margin: '0 4px' }} />}
+                {i > 0 && <Divider orientation="vertical" style={{ margin: '0 4px' }} />}
                 {item.node}
               </span>
             ))}
@@ -193,6 +193,8 @@ function RolesPage() {
   }
 
   const handleOpenPermission = (role: Role) => {
+    // 重置 ref 让 useEffect 走首次同步分支，确保二次打开能回显
+    initializedForRoleId.current = null
     setSelectedRoleId(role.id)
     setSelectedPermissions([])
     setIsPermissionModalOpen(true)
@@ -207,7 +209,10 @@ function RolesPage() {
         permissions: selectedPermissions,
       })
       messageApi.success('权限更新成功')
+      // 关闭时重置状态，下次打开同一角色走首次同步
       setIsPermissionModalOpen(false)
+      setSelectedRoleId(null)
+      initializedForRoleId.current = null
     } catch (error) {
       messageApi.error(extractErrorMessage(error, '权限更新失败'))
     }
@@ -288,7 +293,11 @@ function RolesPage() {
       <Modal
         title="配置权限"
         open={isPermissionModalOpen}
-        onCancel={() => setIsPermissionModalOpen(false)}
+        onCancel={() => {
+          setIsPermissionModalOpen(false)
+          setSelectedRoleId(null)
+          initializedForRoleId.current = null
+        }}
         onOk={handlePermissionSubmit}
         confirmLoading={updateRolePermissions.isPending}
         width={640}

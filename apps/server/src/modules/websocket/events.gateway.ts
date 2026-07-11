@@ -21,6 +21,10 @@ import type { Server, Socket } from 'socket.io'
     origin: true,
     credentials: true,
   },
+  // 主动心跳探测：10s ping 一次，5s 没收到 pong 判定断开
+  // 默认 25s+20s=45s 太慢，用户离线感知延迟过长
+  pingInterval: 10_000,
+  pingTimeout: 5_000,
 })
 export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
@@ -44,6 +48,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return
     }
 
+    const wasOnline = this.isUserOnline(userId)
     if (!this.onlineUsers.has(userId)) {
       this.onlineUsers.set(userId, new Set())
     }
@@ -51,6 +56,11 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     client.data.userId = userId
 
     this.logger.log(`用户 ${userId} 已连接 (socket: ${client.id})`)
+
+    // 新用户上线（之前不在线）才广播，避免多端重复广播
+    if (!wasOnline) {
+      this.pushAll('presence:update', { userId, online: true })
+    }
   }
 
   handleDisconnect(client: Socket) {
@@ -62,6 +72,8 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       sockets.delete(client.id)
       if (sockets.size === 0) {
         this.onlineUsers.delete(userId)
+        // 用户所有连接都断开才广播离线
+        this.pushAll('presence:update', { userId, online: false })
       }
     }
 
