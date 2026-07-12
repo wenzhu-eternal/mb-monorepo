@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { Alert, Button, Form, Input, message, Typography } from 'antd'
 import { useEffect } from 'react'
+import { APP_NAME } from '@/config/brand'
 import { useSetup, useSetupStatus } from '@/hooks/use-setup'
 import { extractErrorMessage } from '@/lib/error'
 
@@ -53,7 +54,7 @@ function SetupPage() {
           系统初始化
         </Title>
         <Paragraph type="secondary" className="text-center mb-6">
-          欢迎使用 MB Admin，请创建首个管理员账号以启用系统
+          欢迎使用 {APP_NAME}，请创建首个管理员账号以启用系统
         </Paragraph>
 
         <Alert

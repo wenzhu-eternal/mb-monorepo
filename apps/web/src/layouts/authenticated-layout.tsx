@@ -14,6 +14,7 @@ import type { MenuProps } from 'antd'
 import { Avatar, Dropdown, Layout, Menu, Space, Typography } from 'antd'
 import type { ReactNode } from 'react'
 import { useState } from 'react'
+import { APP_NAME, APP_SHORT_NAME } from '@/config/brand'
 import { useCurrentUser, useLogout } from '@/hooks/use-auth'
 import { Permissions } from '@/lib/permissions'
 import { useAuthStore } from '@/store/auth-store'
@@ -199,9 +200,9 @@ function AuthenticatedLayoutInner({ children }: { children: ReactNode }) {
       >
         <div className="h-8 m-4 text-white text-center font-bold leading-8 overflow-hidden">
           {collapsed ? (
-            <span className="text-lg">M</span>
+            <span className="text-lg">{APP_SHORT_NAME}</span>
           ) : (
-            <span className="text-lg">MB Admin</span>
+            <span className="text-lg">{APP_NAME}</span>
           )}
         </div>
         <Menu

@@ -1,7 +1,7 @@
 import { Controller, HttpCode, HttpStatus, Post, UseGuards } from '@nestjs/common'
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
-import { Roles } from '@/common/decorators/roles.decorator'
-import { RolesGuard } from '@/common/guards/roles.guard'
+import { Permissions } from '@/common/decorators/permissions.decorator'
+import { PermissionsGuard } from '@/common/guards/permissions.guard'
 import { ScheduleService } from './schedule.service'
 
 @ApiTags('Schedule')
@@ -10,9 +10,9 @@ export class ScheduleController {
   constructor(private readonly scheduleService: ScheduleService) {}
 
   @Post('backup')
-  @UseGuards(RolesGuard)
+  @UseGuards(PermissionsGuard)
   @ApiBearerAuth()
-  @Roles('admin')
+  @Permissions('schedule:backup')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '手动触发数据库备份（仅管理员）' })
   async triggerBackup() {

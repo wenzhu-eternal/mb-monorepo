@@ -5,7 +5,7 @@ import { and, desc, eq, sql } from 'drizzle-orm'
 import { db } from '@/db'
 import { isUniqueViolation, notDeleted } from '@/db/helpers'
 import type { User } from '@/db/schema'
-import { roles, users } from '@/db/schema'
+import { files, roles, users } from '@/db/schema'
 import { Cacheable } from '@/modules/cache/cache.decorator'
 import { CacheService } from '@/modules/cache/cache.service'
 
@@ -228,6 +228,18 @@ export class UsersService {
     // 保护初始管理员账号
     if (existingUser.username === 'admin') {
       throw new ConflictException(ErrorMessages[ErrorCodes.INITIAL_ADMIN_CANNOT_DELETE])
+    }
+
+    // 外键引用校验: files.uploadedBy 无级联删除策略，需检查是否有关联文件
+    const referencedFiles = await db
+      .select({ id: files.id })
+      .from(files)
+      .where(and(eq(files.uploadedBy, id), notDeleted(files.deletedAt)))
+
+    if (referencedFiles.length > 0) {
+      throw new ConflictException(
+        `用户关联了 ${referencedFiles.length} 个文件，请先删除或转移文件后再删除用户`,
+      )
     }
 
     // 软删除: 设置 deletedAt 时间戳

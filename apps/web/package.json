@@ -1,10 +1,10 @@
 {
-  "name": "@mb/web",
+  "name": "@monoforge/web",
   "version": "1.0.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "node scripts/check-port.mjs && vite",
     "build": "tsc && vite build",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",

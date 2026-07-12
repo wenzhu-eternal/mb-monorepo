@@ -1,4 +1,4 @@
-# MB 全栈 Monorepo
+# MonoForge 全栈 Monorepo
 
 可复用的中后台全栈脚手架，基于 pnpm workspace + Turborepo 管理，前后端共享 zod 契约实现端到端类型安全。
 
@@ -105,7 +105,7 @@ docker compose up redis     # 只启动 Redis
 ## 项目结构
 
 ```
-mb-monorepo/
+monoforge/
 ├── apps/
 │   ├── web/          # 前端 (React 19 + Vite 8 + antd6 + TanStack)
 │   └── server/       # 后端 (NestJS 11 + Drizzle + PostgreSQL)

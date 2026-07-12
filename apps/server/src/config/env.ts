@@ -46,13 +46,12 @@ const envSchema = z
     NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   })
   .superRefine((data, ctx) => {
-    // 生产环境强制 COOKIE_SECURE，避免 refresh cookie 被明文截获
+    // 生产环境警告 COOKIE_SECURE 未启用（不强制退出，允许单容器 HTTP 部署配合 ngrok）
     if (data.NODE_ENV === 'production' && !data.COOKIE_SECURE) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['COOKIE_SECURE'],
-        message: '生产环境必须启用 COOKIE_SECURE=true',
-      })
+      console.warn(
+        '⚠️  生产环境未启用 COOKIE_SECURE，refresh cookie 可能被明文截获。' +
+          '若通过 ngrok(https) 或反向代理终结 SSL，请在 .env 设置 COOKIE_SECURE=true',
+      )
     }
   })
 

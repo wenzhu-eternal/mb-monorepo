@@ -1,7 +1,10 @@
-import 'dotenv/config'
+import { config } from 'dotenv'
 import { drizzle } from 'drizzle-orm/postgres-js'
 import postgres from 'postgres'
 import * as schema from './schema'
+
+// 显式加载根目录 .env，避免在 apps/server/ 下运行时找不到环境变量
+config({ path: '../../.env' })
 
 const connectionString = process.env.DATABASE_URL!
 

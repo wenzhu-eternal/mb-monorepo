@@ -15,6 +15,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common'
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger'
+import { Throttle } from '@nestjs/throttler'
 import { Permissions } from '@/common/decorators/permissions.decorator'
 import { PermissionsGuard } from '@/common/guards/permissions.guard'
 import { CacheInterceptor } from '@/modules/cache/cache.interceptor'
@@ -55,6 +56,7 @@ export class UsersController {
   }
 
   @Get(':id')
+  @Throttle({ default: { limit: 60, ttl: 60000 } })
   @Permissions('user:view')
   @UseInterceptors(CacheInterceptor)
   @ApiOperation({ summary: '按ID查询用户（带缓存）' })

@@ -58,8 +58,8 @@ async function bootstrap() {
   // Swagger 仅在非生产环境暴露，避免生产泄漏接口文档
   if (!isProduction) {
     const config = new DocumentBuilder()
-      .setTitle('MB Admin API')
-      .setDescription('MB全栈monorepo API文档')
+      .setTitle('MonoForge API')
+      .setDescription('MonoForge 全栈 monorepo API 文档')
       .setVersion('1.0')
       .addBearerAuth()
       .build()

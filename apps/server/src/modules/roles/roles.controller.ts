@@ -14,6 +14,7 @@ import {
   UseGuards,
 } from '@nestjs/common'
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger'
+import { Throttle } from '@nestjs/throttler'
 import { Permissions } from '@/common/decorators/permissions.decorator'
 import { PermissionsGuard } from '@/common/guards/permissions.guard'
 import { CreateRoleDto } from './dto/create-role.dto'
@@ -45,6 +46,7 @@ export class RolesController {
   }
 
   @Get(':id')
+  @Throttle({ default: { limit: 60, ttl: 60000 } })
   @Permissions('role:view')
   @ApiOperation({ summary: '按ID查询角色' })
   async findOne(@Param('id', ParseIntPipe) id: number) {

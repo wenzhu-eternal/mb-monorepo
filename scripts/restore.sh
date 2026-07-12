@@ -10,9 +10,9 @@
 
 set -e
 
-CONTAINER="mb-postgres"
-DB_USER="mb_user"
-DB_NAME="mb_database"
+CONTAINER="monoforge-postgres"
+DB_USER="monoforge_user"
+DB_NAME="monoforge_database"
 BACKUP_DIR="apps/server/backups"
 
 # 确定备份文件

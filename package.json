@@ -1,8 +1,9 @@
 {
-  "name": "mb-monorepo",
+  "name": "monoforge",
   "version": "1.0.0",
   "private": true,
-  "description": "MB全栈monorepo - 前后端共享zod契约",
+  "type": "module",
+  "description": "MonoForge 全栈 monorepo - 前后端共享zod契约",
   "packageManager": "pnpm@10.32.1",
   "scripts": {
     "dev": "turbo dev",
@@ -30,7 +31,13 @@
   "pnpm": {
     "overrides": {
       "multer": "^2.2.0"
-    }
+    },
+    "onlyBuiltDependencies": [
+      "@swc/core",
+      "esbuild",
+      "argon2",
+      "msw"
+    ]
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx}": [

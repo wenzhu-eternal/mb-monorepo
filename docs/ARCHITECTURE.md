@@ -4,7 +4,7 @@
 
 ## 项目概述
 
-MB 全栈 Monorepo 是一个可复用的中后台全栈脚手架，基于 pnpm workspace + Turborepo 管理，前后端共享 zod 契约实现端到端类型安全。
+MonoForge 全栈 Monorepo 是一个可复用的中后台全栈脚手架，基于 pnpm workspace + Turborepo 管理，前后端共享 zod 契约实现端到端类型安全。
 
 ---
 
@@ -34,7 +34,7 @@ MB 全栈 Monorepo 是一个可复用的中后台全栈脚手架，基于 pnpm w
 ## 目录结构
 
 ```
-mb-monorepo/
+monoforge/
 ├── apps/
 │   ├── web/                      # 前端 (React 19 + Vite 8 + antd6 + TanStack)
 │   │   ├── src/{routes,components,hooks,stores,lib}
@@ -98,10 +98,29 @@ mb-monorepo/
 | PATCH/DELETE | /api/v1/permissions/:id | 权限更新/删除 | 是 |
 | PUT | /api/v1/role-permissions/role/:roleId | 配置角色权限 | 是 |
 | GET | /api/v1/error-logs | 错误日志列表 | 是 |
+| GET | /api/v1/error-logs/:id | 错误日志详情 | 是 |
 | GET | /api/v1/error-logs/stats | 错误日志统计 | 是 |
+| GET | /api/v1/error-logs/grouped | 错误聚合 Top N | 是 |
+| POST | /api/v1/error-logs/report | 前端错误上报 | 否 |
+| POST | /api/v1/error-logs/:id/resolve | 标记已处理 | 是 |
+| POST | /api/v1/error-logs/batch-resolve | 批量标记已处理 | 是 |
 | DELETE | /api/v1/error-logs/:id | 删除错误日志 | 是 |
-| POST/GET/PATCH/DELETE | /api/v1/error-whitelist* | 错误日志白名单 CRUD | 是 (admin) |
+| GET/POST | /api/v1/error-logs/whitelist | 白名单列表/创建 | 是 |
+| PATCH/DELETE | /api/v1/error-logs/whitelist/:id | 白名单更新/删除 | 是 |
 | GET | /api/v1/audit-logs | 审计日志列表 | 是 |
+| GET | /api/v1/audit-logs/:id | 审计日志详情 | 是 |
+| GET | /api/v1/files | 文件列表 | 是 |
+| POST | /api/v1/files/upload | 上传文件 | 是 |
+| DELETE | /api/v1/files/:id | 删除文件 | 是 |
+| POST | /api/v1/mail/welcome | 发送欢迎邮件 | 是 |
+| POST | /api/v1/mail/verification-code | 发送验证码邮件 | 是 |
+| POST | /api/v1/schedule/backup | 手动触发数据库备份 | 是 |
+| GET | /api/v1/notifications | 通知列表 | 是 |
+| GET | /api/v1/notifications/unread-count | 未读通知数 | 是 |
+| POST | /api/v1/notifications/:id/read | 标记通知已读 | 是 |
+| POST | /api/v1/notifications/read-all | 全部标记已读 | 是 |
+| DELETE | /api/v1/notifications/:id | 删除通知 | 是 |
+| WS | / | WebSocket 实时推送 | 是 |
 
 ---
 
@@ -211,7 +230,7 @@ packages/shared/schemas/
 ```typescript
 // 后端 DTO 校验
 import { createZodDto } from 'nestjs-zod';
-import { CreateUserSchema } from '@mb/shared/schemas';
+import { CreateUserSchema } from '@monoforge/shared/schemas';
 
 export class CreateUserDto extends createZodDto(CreateUserSchema) {}
 ```
@@ -220,7 +239,7 @@ export class CreateUserDto extends createZodDto(CreateUserSchema) {}
 
 ```typescript
 // 前端类型派生
-import { CreateUserSchema } from '@mb/shared/schemas';
+import { CreateUserSchema } from '@monoforge/shared/schemas';
 import type { z } from 'zod';
 
 type CreateUser = z.infer<typeof CreateUserSchema>;
@@ -234,15 +253,30 @@ type CreateUser = z.infer<typeof CreateUserSchema>;
 
 | 服务 | 端口 | 说明 |
 |---|---|---|
-| postgres | 5432 | PostgreSQL 16 |
-| redis | 6379 | Redis 7 |
+| postgres | 5434 | PostgreSQL 16（独立容器，与 travel-car 5432 / only-love 5433 隔离） |
+| redis | 6381 | Redis 7（独立容器，与 travel-car 6379 / only-love 6380 隔离） |
 | app | 9000 | NestJS 后端（含前端 dist，单一入口） |
 
 ### Dockerfile 策略
 
 - **单一入口**：根 `Dockerfile` 多阶段构建，同时编译 shared → server → web，最终运行 `node apps/server/dist/main.js`
 - 前端 `dist` 由后端 `ServeStaticModule` 托管，无需独立 nginx 容器
+- `uploads/` 目录也由 `ServeStaticModule` 托管（`serveRoot: /uploads`），文件上传/导出的 URL 可直接访问
 - 详见 [DEPLOYMENT.md](./DEPLOYMENT.md)
+
+### 前端构建优化
+
+`vite.config.ts` 通过 `build.rollupOptions.output.manualChunks` 拆分大依赖：
+
+| chunk | 内容 |
+|---|---|
+| `vendor-react` | react + react-dom |
+| `vendor-router` | @tanstack/react-router + @tanstack/react-query |
+| `vendor-antd` | antd + @ant-design/icons |
+
+### 原生模块构建
+
+根 `package.json` 的 `pnpm.onlyBuiltDependencies` 预置了需要构建脚本的原生依赖（`@swc/core`、`esbuild`、`argon2`、`msw`），pnpm install 后自动执行构建脚本。
 
 ### 环境变量
 

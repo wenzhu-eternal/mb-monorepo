@@ -66,7 +66,7 @@ function LoginPage() {
       {contextHolder}
       <div className="w-full max-w-md p-8 bg-white rounded-lg shadow-md">
         <Title level={2} className="text-center mb-8">
-          MB 管理后台登录
+          MonoForge 管理后台登录
         </Title>
         <Form form={form} onFinish={onSubmit} layout="vertical" autoComplete="off">
           <Form.Item

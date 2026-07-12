@@ -187,7 +187,16 @@ describe('UsersService', () => {
     })
 
     it('软删除成功并清缓存', async () => {
-      vi.mocked(mockDb.query.users.findFirst).mockResolvedValue({ id: 1 } as never)
+      vi.mocked(mockDb.query.users.findFirst).mockResolvedValue({
+        id: 1,
+        username: 'testuser',
+      } as never)
+      // 外键校验: 无关联文件
+      vi.mocked(mockDb.select).mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([]),
+        }),
+      } as never)
       vi.mocked(mockDb.update).mockReturnValue({
         set: vi.fn().mockReturnValue({
           where: vi.fn().mockResolvedValue(undefined),
@@ -197,6 +206,20 @@ describe('UsersService', () => {
       const result = await service.remove(1)
       expect(result.message).toContain('1')
       expect(cacheServiceMock.delByPattern).toHaveBeenCalled()
+    })
+
+    it('关联文件时抛 ConflictException', async () => {
+      vi.mocked(mockDb.query.users.findFirst).mockResolvedValue({
+        id: 2,
+        username: 'fileuser',
+      } as never)
+      vi.mocked(mockDb.select).mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([{ id: 10 }, { id: 11 }]),
+        }),
+      } as never)
+
+      await expect(service.remove(2)).rejects.toThrow(ConflictException)
     })
   })
 

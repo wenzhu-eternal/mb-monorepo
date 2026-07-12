@@ -1,5 +1,5 @@
 {
-  "name": "@mb/server",
+  "name": "@monoforge/server",
   "version": "1.0.0",
   "private": true,
   "scripts": {

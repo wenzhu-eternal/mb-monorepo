@@ -39,10 +39,9 @@ export class MailService {
   }
 
   private loadTemplates(): void {
-    // dev: process.cwd() = apps/server/ → src/templates/email
-    // prod: process.cwd() = apps/server/ → dist/templates/email（由 nest-cli.json assets 复制）
-    const isProd = this.configService.get<string>('NODE_ENV') === 'production'
-    const templateDir = join(process.cwd(), isProd ? 'dist' : 'src', 'templates', 'email')
+    // __dirname 在 dev 时为 src/modules/mail/，prod 时为 dist/modules/mail/
+    // 两种场景下 ../../templates/email 都指向正确的模板目录
+    const templateDir = join(__dirname, '..', '..', 'templates', 'email')
     const templateNames = ['welcome', 'verification', 'backup']
 
     for (const name of templateNames) {
@@ -65,12 +64,12 @@ export class MailService {
   async sendWelcome(to: string, username: string): Promise<void> {
     const template = this.templates.get('welcome')
     if (template) {
-      await this.sendHtml(to, '欢迎注册 MB Admin', template({ name: username }))
+      await this.sendHtml(to, '欢迎注册 MonoForge', template({ name: username }))
     } else {
       await this.send(
         to,
-        '欢迎注册 MB Admin',
-        `你好，${username}！欢迎注册 MB Admin 系统管理后台。`,
+        '欢迎注册 MonoForge',
+        `你好，${username}！欢迎注册 MonoForge 系统管理后台。`,
       )
     }
   }
@@ -84,13 +83,13 @@ export class MailService {
     if (template) {
       await this.sendHtml(
         to,
-        '【MB Admin】验证码',
+        '【MonoForge】验证码',
         template({ name: name ?? '用户', code, expireMinutes: 5 }),
       )
     } else {
       await this.send(
         to,
-        '【MB Admin】验证码',
+        '【MonoForge】验证码',
         `你的验证码是: ${code}\n\n验证码 5 分钟内有效，请勿泄露给他人。`,
       )
     }
@@ -105,7 +104,7 @@ export class MailService {
     backupDate?: string,
     filepath?: string,
   ): Promise<void> {
-    const subject = success ? '【MB Admin】数据库备份成功' : '【MB Admin】数据库备份失败'
+    const subject = success ? '【MonoForge】数据库备份成功' : '【MonoForge】数据库备份失败'
     const template = this.templates.get('backup')
     const html = template
       ? template({

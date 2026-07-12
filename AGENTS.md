@@ -11,7 +11,7 @@
 ## 目录约定
 
 ```
-mb-monorepo/
+monoforge/
 ├── apps/
 │   ├── web/          # 前端 (React 19 + Vite 8 + antd6 + TanStack)
 │   └── server/       # 后端 (NestJS 11 + Drizzle + PostgreSQL)

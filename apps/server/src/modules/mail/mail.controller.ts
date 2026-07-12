@@ -8,22 +8,22 @@ import {
   UseGuards,
 } from '@nestjs/common'
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
-import { Roles } from '@/common/decorators/roles.decorator'
-import { RolesGuard } from '@/common/guards/roles.guard'
+import { Permissions } from '@/common/decorators/permissions.decorator'
+import { PermissionsGuard } from '@/common/guards/permissions.guard'
 import { SendVerificationCodeMailDto, SendWelcomeMailDto } from './dto/mail.dto'
 import { MailService } from './mail.service'
 
 @ApiTags('Mail')
 @ApiBearerAuth()
 @Controller('mail')
-@UseGuards(RolesGuard)
-@Roles('admin')
+@UseGuards(PermissionsGuard)
+@Permissions('mail:send')
 export class MailController {
   constructor(private readonly mailService: MailService) {}
 
   @Post('welcome')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: '发送欢迎邮件（仅管理员）' })
+  @ApiOperation({ summary: '发送欢迎邮件' })
   async sendWelcome(@Body() dto: SendWelcomeMailDto) {
     if (!this.mailService.isConfigured()) {
       throw new BadRequestException('邮件服务未配置（缺少 MAIL_HOST/PORT/USER/PASSWORD），无法发送')
@@ -34,7 +34,7 @@ export class MailController {
 
   @Post('verification-code')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: '发送验证码邮件（仅管理员）' })
+  @ApiOperation({ summary: '发送验证码邮件' })
   async sendVerificationCode(@Body() dto: SendVerificationCodeMailDto) {
     if (!this.mailService.isConfigured()) {
       throw new BadRequestException('邮件服务未配置（缺少 MAIL_HOST/PORT/USER/PASSWORD），无法发送')

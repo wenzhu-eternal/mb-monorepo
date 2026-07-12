@@ -14,10 +14,11 @@ import {
   UseGuards,
 } from '@nestjs/common'
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger'
+import { SkipThrottle, Throttle } from '@nestjs/throttler'
 import { CurrentUser } from '@/common/decorators/current-user.decorator'
+import { Permissions } from '@/common/decorators/permissions.decorator'
 import { Public } from '@/common/decorators/public.decorator'
-import { Roles } from '@/common/decorators/roles.decorator'
-import { RolesGuard } from '@/common/guards/roles.guard'
+import { PermissionsGuard } from '@/common/guards/permissions.guard'
 import { BatchResolveDto } from './dto/batch-resolve.dto'
 import { CreateWhitelistDto } from './dto/create-whitelist.dto'
 import { ReportErrorDto } from './dto/report-error.dto'
@@ -29,7 +30,7 @@ import { ErrorLogsService } from './error-logs.service'
 export class ErrorLogsController {
   constructor(private readonly errorLogsService: ErrorLogsService) {}
 
-  // ===== 前端错误上报（公开，不需要 admin）=====
+  // ===== 前端错误上报（公开，不需要权限）=====
 
   @Post('report')
   @Public()
@@ -39,13 +40,14 @@ export class ErrorLogsController {
     return this.errorLogsService.report(dto)
   }
 
-  // ===== 需要 admin 权限的接口 =====
+  // ===== 只读接口：@SkipThrottle 避免高频查询被 429 =====
 
   @Get()
-  @UseGuards(RolesGuard)
+  @SkipThrottle()
+  @UseGuards(PermissionsGuard)
   @ApiBearerAuth()
-  @Roles('admin')
-  @ApiOperation({ summary: '分页查询错误日志（仅管理员）' })
+  @Permissions('error_log:view')
+  @ApiOperation({ summary: '分页查询错误日志' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'pageSize', required: false, type: Number })
   @ApiQuery({ name: 'keyword', required: false, type: String })
@@ -70,19 +72,21 @@ export class ErrorLogsController {
   }
 
   @Get('stats')
-  @UseGuards(RolesGuard)
+  @SkipThrottle()
+  @UseGuards(PermissionsGuard)
   @ApiBearerAuth()
-  @Roles('admin')
-  @ApiOperation({ summary: '错误统计（仅管理员）' })
+  @Permissions('error_log:view')
+  @ApiOperation({ summary: '错误统计' })
   async getStats() {
     return this.errorLogsService.getStats()
   }
 
   @Get('grouped')
-  @UseGuards(RolesGuard)
+  @SkipThrottle()
+  @UseGuards(PermissionsGuard)
   @ApiBearerAuth()
-  @Roles('admin')
-  @ApiOperation({ summary: '相同报错聚合 Top N（仅管理员）' })
+  @Permissions('error_log:view')
+  @ApiOperation({ summary: '相同报错聚合 Top N' })
   @ApiQuery({ name: 'limit', required: false, type: Number })
   async findGrouped(@Query('limit') limit?: string) {
     const n = limit ? Number.parseInt(limit, 10) : 10
@@ -93,49 +97,55 @@ export class ErrorLogsController {
   }
 
   @Get('whitelist')
-  @UseGuards(RolesGuard)
+  @SkipThrottle()
+  @UseGuards(PermissionsGuard)
   @ApiBearerAuth()
-  @Roles('admin')
-  @ApiOperation({ summary: '查询全部白名单（仅管理员）' })
+  @Permissions('error_log:view')
+  @ApiOperation({ summary: '查询全部白名单' })
   async findWhitelist() {
     return this.errorLogsService.findWhitelist()
   }
 
+  // ===== 单条查询：放大限流（可能高频查详情）=====
+
   @Get(':id')
-  @UseGuards(RolesGuard)
+  @Throttle({ default: { limit: 60, ttl: 60000 } })
+  @UseGuards(PermissionsGuard)
   @ApiBearerAuth()
-  @Roles('admin')
-  @ApiOperation({ summary: '按ID查询错误日志（仅管理员）' })
+  @Permissions('error_log:view')
+  @ApiOperation({ summary: '按ID查询错误日志' })
   async findOne(@Param('id', ParseIntPipe) id: number) {
     return this.errorLogsService.findById(id)
   }
 
+  // ===== 写操作：error_log:manage 权限 =====
+
   @Post(':id/resolve')
-  @UseGuards(RolesGuard)
+  @UseGuards(PermissionsGuard)
   @ApiBearerAuth()
-  @Roles('admin')
+  @Permissions('error_log:manage')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: '标记错误已处理（仅管理员）' })
+  @ApiOperation({ summary: '标记错误已处理' })
   async resolve(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: { sub: number }) {
     return this.errorLogsService.resolve(id, user.sub)
   }
 
   @Post('batch-resolve')
-  @UseGuards(RolesGuard)
+  @UseGuards(PermissionsGuard)
   @ApiBearerAuth()
-  @Roles('admin')
+  @Permissions('error_log:manage')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: '批量标记相同报错已处理（仅管理员）' })
+  @ApiOperation({ summary: '批量标记相同报错已处理' })
   async batchResolve(@Body() dto: BatchResolveDto, @CurrentUser() user: { sub: number }) {
     return this.errorLogsService.batchResolve(dto.message, dto.source, user.sub)
   }
 
   @Delete(':id')
-  @UseGuards(RolesGuard)
+  @UseGuards(PermissionsGuard)
   @ApiBearerAuth()
-  @Roles('admin')
+  @Permissions('error_log:manage')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: '删除错误日志（仅管理员）' })
+  @ApiOperation({ summary: '删除错误日志' })
   async remove(@Param('id', ParseIntPipe) id: number) {
     return this.errorLogsService.remove(id)
   }
@@ -143,30 +153,30 @@ export class ErrorLogsController {
   // ===== 白名单 CRUD =====
 
   @Post('whitelist')
-  @UseGuards(RolesGuard)
+  @UseGuards(PermissionsGuard)
   @ApiBearerAuth()
-  @Roles('admin')
+  @Permissions('error_log:manage')
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: '创建白名单规则（仅管理员）' })
+  @ApiOperation({ summary: '创建白名单规则' })
   async createWhitelist(@Body() dto: CreateWhitelistDto) {
     return this.errorLogsService.createWhitelist(dto)
   }
 
   @Patch('whitelist/:id')
-  @UseGuards(RolesGuard)
+  @UseGuards(PermissionsGuard)
   @ApiBearerAuth()
-  @Roles('admin')
-  @ApiOperation({ summary: '更新白名单规则（仅管理员）' })
+  @Permissions('error_log:manage')
+  @ApiOperation({ summary: '更新白名单规则' })
   async updateWhitelist(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateWhitelistDto) {
     return this.errorLogsService.updateWhitelist(id, dto)
   }
 
   @Delete('whitelist/:id')
-  @UseGuards(RolesGuard)
+  @UseGuards(PermissionsGuard)
   @ApiBearerAuth()
-  @Roles('admin')
+  @Permissions('error_log:manage')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: '删除白名单规则（仅管理员）' })
+  @ApiOperation({ summary: '删除白名单规则' })
   async removeWhitelist(@Param('id', ParseIntPipe) id: number) {
     return this.errorLogsService.removeWhitelist(id)
   }

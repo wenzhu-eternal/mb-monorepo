@@ -1,9 +1,13 @@
 import { createRouter, RouterProvider } from '@tanstack/react-router'
 import React from 'react'
 import ReactDOM from 'react-dom/client'
+import { APP_NAME } from '@/config/brand'
 import { installGlobalErrorHandlers } from '@/lib/error-reporter'
 import './index.css'
 import { routeTree } from './routeTree.gen'
+
+// 动态设置页面标题（由品牌配置驱动，不依赖 Vite HTML 插值）
+document.title = APP_NAME
 
 const router = createRouter({ routeTree })
 

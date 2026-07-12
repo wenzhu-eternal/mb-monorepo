@@ -32,12 +32,21 @@ import { WechatModule } from './modules/wechat/wechat.module'
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      // 显式指定根目录 .env，避免在 apps/server/ 下运行时找不到
+      envFilePath: [join(__dirname, '..', '..', '..', '.env')],
       // 环境变量校验由 main.ts 中的 validateEnv() 统一负责（zod schema）
     }),
-    ServeStaticModule.forRoot({
-      rootPath: join(__dirname, '..', '..', 'web', 'dist'),
-      exclude: ['/api/{*path}'],
-    }),
+    ServeStaticModule.forRoot(
+      {
+        rootPath: join(__dirname, '..', '..', 'web', 'dist'),
+        exclude: ['/api/{*path}'],
+      },
+      {
+        rootPath: join(__dirname, '..', '..', '..', 'uploads'),
+        serveRoot: '/uploads',
+        serveStaticOptions: { index: false },
+      },
+    ),
     ThrottlerModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

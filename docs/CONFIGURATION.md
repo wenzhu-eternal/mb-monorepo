@@ -2,7 +2,8 @@
 
 ## 环境变量管理
 
-- 所有环境变量通过 `.env` 文件管理（`apps/server/.env`、`apps/web/.env`）
+- 所有环境变量通过**根目录** `.env` 文件统一管理（`db/index.ts`、`drizzle.config.ts`、`app.module.ts` 均显式加载根目录 `.env`）
+- 前端额外变量（`VITE_*`）也在根目录 `.env` 中配置
 - 关键变量缺失时服务启动即失败（fail-fast）
 - 详见 `.env.example` 作为完整变量清单模板
 
@@ -10,8 +11,8 @@
 
 | 变量 | 说明 | 默认/示例 |
 |---|---|---|
-| `DATABASE_URL` | PostgreSQL 连接串 | `postgresql://mb_user:mb_password@localhost:5432/mb_database` |
-| `REDIS_URL` | Redis 连接串 | `redis://localhost:6379` |
+| `DATABASE_URL` | PostgreSQL 连接串 | `postgresql://monoforge_user:monoforge_password@localhost:5434/monoforge_database` |
+| `REDIS_URL` | Redis 连接串 | `redis://localhost:6381` |
 | `JWT_SECRET` | JWT access token 密钥 | 必填，长度 >= 32 |
 | `JWT_REFRESH_SECRET` | JWT refresh token 密钥 | 必填，长度 >= 32 |
 | `API_PORT` | 后端端口 | `9000` |
@@ -48,6 +49,25 @@ const port = portRaw ? Number(portRaw) : 587
 
 必须由环境变量控制，不能硬编码。开发环境（HTTP）必须设为 `false`，生产环境（HTTPS）必须设为 `true`。
 
+## 前端环境变量
+
+| 变量 | 说明 | 默认值 |
+|---|---|---|
+| `VITE_API_BASE_URL` | API 基础地址（同源留空，分离部署配完整 URL） | `''` |
+| `VITE_APP_NAME` | 品牌名（侧边栏 Logo、页面标题） | `MonoForge` |
+| `VITE_APP_SHORT_NAME` | 品牌简称（侧边栏折叠态显示） | `M` |
+
+### 品牌配置
+
+- 品牌名统一由 `apps/web/src/config/brand.ts` 管理，禁止在组件中硬编码
+- 新项目接入时修改 `.env` 的 `VITE_APP_NAME` / `VITE_APP_SHORT_NAME` 即可
+- `index.html` 的 `<title>` 使用 `%VITE_APP_NAME%` 由 Vite 注入
+
+### drizzle-kit 环境变量
+
+- `drizzle.config.ts` 已显式加载根目录 `.env`（`config({ path: '../../.env' })`）
+- 在 `apps/server/` 下运行 `drizzle-kit generate` / `drizzle-kit migrate` 时无需手动指定 `.env` 路径
+
 ## 邮件服务规范
 
 ### 验证码必须后端生成
@@ -79,11 +99,11 @@ export const SendVerificationCodeMailSchema = z.object({
 ### 邮件模板路径
 
 - 模板文件位于 `apps/server/src/templates/email/*.hbs`（Handlebars）
-- `mail.service` 用 `process.cwd()` + `NODE_ENV` 判断查找路径：
-  - dev：`{cwd}/src/templates/email/`
-  - prod：`{cwd}/dist/templates/email/`（由 `nest-cli.json` 的 `assets` 配置复制）
+- `mail.service` 用 `__dirname` 定位模板目录，dev/prod 统一为 `../../templates/email/`：
+  - dev：`src/modules/mail/` → `src/templates/email/`
+  - prod：`dist/modules/mail/` → `dist/templates/email/`（由 `nest-cli.json` 的 `assets` 配置复制）
 - `nest-cli.json` 必须配置 `assets: [{ "include": "templates/email/*.hbs", "outDir": "dist" }]`，否则生产构建后模板丢失
-- 生产部署时 Docker/PM2 的 `WORKDIR` 必须是 `apps/server/`，否则 `process.cwd()` 路径失效
+- `__dirname` 方式不依赖 `process.cwd()`，Docker / PM2 任意 WORKDIR 均可正确加载
 
 ### 端口强转
 

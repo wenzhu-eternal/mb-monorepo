@@ -8,6 +8,7 @@ import {
   UseGuards,
 } from '@nestjs/common'
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger'
+import { Throttle } from '@nestjs/throttler'
 import { Permissions } from '@/common/decorators/permissions.decorator'
 import { PermissionsGuard } from '@/common/guards/permissions.guard'
 import { AuditService } from './audit.service'
@@ -37,6 +38,7 @@ export class AuditController {
   }
 
   @Get(':id')
+  @Throttle({ default: { limit: 60, ttl: 60000 } })
   @Permissions('audit:view')
   @ApiOperation({ summary: '按ID查询审计日志' })
   async findOne(@Param('id', ParseIntPipe) id: number) {

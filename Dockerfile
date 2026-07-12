@@ -18,18 +18,18 @@ COPY packages/shared/package.json ./packages/shared/
 RUN pnpm install --frozen-lockfile
 
 COPY packages/shared/ ./packages/shared/
-RUN pnpm -F @mb/shared build
+RUN pnpm -F @monoforge/shared build
 
 COPY apps/server/ ./apps/server/
-RUN pnpm -F @mb/server build
+RUN pnpm -F @monoforge/server build
 
 COPY apps/web/ ./apps/web/
-RUN pnpm -F @mb/web build
+RUN pnpm -F @monoforge/web build
 
 # ===== Runtime stage =====
 FROM node:20-alpine AS runner
 RUN sed -i 's|https://dl-cdn.alpinelinux.org|http://mirrors.aliyun.com|g' /etc/apk/repositories
-RUN apk add --no-cache tini
+RUN apk add --no-cache tini wget
 WORKDIR /app
 ENV NODE_ENV=production
 
@@ -42,6 +42,9 @@ COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/apps/server/node_modules ./apps/server/node_modules
 COPY --from=builder /app/packages/shared/node_modules ./packages/shared/node_modules
+
+# 创建 uploads 目录并赋权，避免 named volume 挂载后属主为 root 导致 node 用户无写权限
+RUN mkdir -p /app/uploads && chown -R node:node /app/uploads
 
 ENV API_PORT=9000
 EXPOSE 9000

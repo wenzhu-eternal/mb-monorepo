@@ -1,7 +1,10 @@
-import 'dotenv/config'
+import { config } from 'dotenv'
 import { eq } from 'drizzle-orm'
 import { db } from './index'
 import { errorWhitelist, permissions, rolePermissions, roles, users } from './schema'
+
+// 显式加载根目录 .env，与 db/index.ts 保持一致，避免从 cwd 加载到错误文件
+config({ path: '../../.env' })
 
 // argon2 hash for password "admin123"
 const ADMIN_PASSWORD_HASH =
@@ -79,10 +82,28 @@ const defaultPermissions = [
     routes: ['POST /files/upload'],
   },
   {
+    code: 'file:delete',
+    name: '删除文件',
+    description: '删除文件',
+    routes: ['DELETE /files/:id'],
+  },
+  {
     code: 'audit:view',
     name: '查看审计日志',
     description: '查看审计日志',
     routes: ['GET /audit-logs/', 'GET /audit-logs/:id'],
+  },
+  {
+    code: 'mail:send',
+    name: '发送邮件',
+    description: '发送欢迎邮件和验证码',
+    routes: ['POST /mail/welcome', 'POST /mail/verification-code'],
+  },
+  {
+    code: 'schedule:backup',
+    name: '触发备份',
+    description: '手动触发数据库备份',
+    routes: ['POST /schedule/backup'],
   },
   {
     code: 'error_log:view',

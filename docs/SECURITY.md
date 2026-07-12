@@ -66,11 +66,28 @@
 
 - 仅 admin 用户或原始上传者可删除文件
 
+## 权限控制
+
+### 统一使用 @Permissions + PermissionsGuard
+
+- **禁止使用 `@Roles('admin')` + `RolesGuard`**：`@Roles` 只匹配角色名，无法通过权限配置页动态分配
+- **必须使用 `@Permissions('xxx:yyy')` + `PermissionsGuard`**：权限码格式为 `资源:操作`（如 `user:view`/`error_log:manage`）
+- 权限码必须在 `seed.ts` 的 `defaultPermissions` 中定义，controller 中使用的权限码必须与 seed 一致
+- `PermissionsGuard` 通过 `getPermissionsByUserId` 查询用户角色的权限码列表进行鉴权
+
+### 权限码命名规范
+
+格式：`{resource}:{action}`
+
+- resource 用 snake_case（如 `error_log`）
+- action 用 `view`/`create`/`update`/`delete`/`manage`/`upload`/`send` 等
+
 ## 限流
 
 - `ThrottlerModule` 必须通过 `APP_GUARD` 注册 `ThrottlerGuard` 才能生效
 - 限流参数（TTL/limit）必须用环境变量，禁止硬编码
 - error-logs 模块的只读接口（findAll/stats/grouped/whitelist）必须 `@SkipThrottle()`，避免 429
+- 单条查询接口（如 `@Get(':id')`）用 `@Throttle({ default: { limit: 60, ttl: 60000 } })` 放大限流（60 次/分钟），避免高频查详情被 429
 
 ## CORS
 

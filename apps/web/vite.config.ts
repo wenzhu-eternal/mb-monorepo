@@ -13,6 +13,19 @@ export default defineConfig({
       '@shared/': resolve(__dirname, '../../packages/shared/src/'),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        // 拆分大依赖，避免单个 chunk 过大
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return
+          if (id.includes('@tanstack/')) return 'vendor-router'
+          if (id.includes('antd/') || id.includes('@ant-design/')) return 'vendor-antd'
+          if (id.includes('/react/') || id.includes('/react-dom/')) return 'vendor-react'
+        },
+      },
+    },
+  },
   server: {
     port: 3000,
     host: '0.0.0.0',

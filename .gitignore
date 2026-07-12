@@ -43,7 +43,7 @@ coverage/
 tmp/
 temp/
 
-# uploads
+# uploads - 默认忽略上传文件（如需入库，注释掉此行或改为 !uploads/.gitkeep）
 uploads/
 
 # Database backups（本地临时数据，不进版本库）
