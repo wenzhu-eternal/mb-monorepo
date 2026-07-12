@@ -1,10 +1,8 @@
 import { z } from 'zod'
 
-// 错误来源
 export const ErrorSource = z.enum(['frontend', 'backend', 'taro'])
 export type ErrorSource = z.infer<typeof ErrorSource>
 
-// 错误类型
 export const ErrorType = z.enum([
   'js_error',
   'http_error',
@@ -14,11 +12,9 @@ export const ErrorType = z.enum([
 ])
 export type ErrorType = z.infer<typeof ErrorType>
 
-// 白名单匹配类型
 export const WhitelistMatchType = z.enum(['message', 'url'])
 export type WhitelistMatchType = z.infer<typeof WhitelistMatchType>
 
-// 错误日志
 export const ErrorLogSchema = z.object({
   id: z.number().int().positive(),
   source: z.string(),
@@ -41,7 +37,6 @@ export const ErrorLogSchema = z.object({
   createdAt: z.date(),
 })
 
-// 错误上报
 export const ReportErrorSchema = z.object({
   source: ErrorSource.default('frontend'),
   errorType: ErrorType.optional(),
@@ -56,7 +51,6 @@ export const ReportErrorSchema = z.object({
   context: z.record(z.string(), z.unknown()).optional(),
 })
 
-// 错误统计
 export const ErrorStatsSchema = z.object({
   total: z.number(),
   unresolved: z.number(),
@@ -64,7 +58,6 @@ export const ErrorStatsSchema = z.object({
   byType: z.record(z.string(), z.number()),
 })
 
-// 白名单记录
 export const ErrorWhitelistSchema = z.object({
   id: z.number().int().positive(),
   pattern: z.string().min(1).max(500),
@@ -75,7 +68,6 @@ export const ErrorWhitelistSchema = z.object({
   updatedAt: z.date(),
 })
 
-// 创建白名单
 export const CreateErrorWhitelistSchema = z.object({
   pattern: z.string().min(1).max(500),
   matchType: WhitelistMatchType.default('message'),
@@ -83,7 +75,6 @@ export const CreateErrorWhitelistSchema = z.object({
   isActive: z.boolean().default(true),
 })
 
-// 更新白名单
 export const UpdateErrorWhitelistSchema = z.object({
   pattern: z.string().min(1).max(500).optional(),
   matchType: WhitelistMatchType.optional(),
@@ -91,7 +82,6 @@ export const UpdateErrorWhitelistSchema = z.object({
   isActive: z.boolean().optional(),
 })
 
-// 批量标记错误已处理
 export const BatchResolveErrorSchema = z.object({
   message: z.string().min(1),
   source: z.string().min(1),

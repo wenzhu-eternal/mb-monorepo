@@ -21,10 +21,13 @@ import { useRoles } from '@/hooks/use-roles'
 import { useCreateUser, useDeleteUser, useUpdateUser, useUsers } from '@/hooks/use-users'
 import { AuthenticatedLayout } from '@/layouts/authenticated-layout'
 import { extractErrorMessage } from '@/lib/error'
+import { Permissions } from '@/lib/permissions'
+import { requirePermission } from '@/lib/route-guards'
 
 const { Title } = Typography
 
 export const Route = createFileRoute('/users')({
+  beforeLoad: requirePermission(Permissions.USER_VIEW),
   component: UsersPage,
 })
 
@@ -159,14 +162,12 @@ function UsersPage() {
           roleId: values.roleId,
           status: values.status,
         }
-        // 密码留空则不传
         if (values.password) {
           updateData.password = values.password
         }
         await updateUser.mutateAsync({ id: editingUser.id, data: updateData })
         messageApi.success('更新成功')
       } else {
-        // 新建时同样白名单挑字段，避免残留字段触发 Zod 校验失败
         const createData: CreateUser = {
           username: values.username,
           email: values.email,

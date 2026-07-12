@@ -67,9 +67,6 @@ export const useDeleteFile = () => {
   })
 }
 
-/**
- * 预览文件: 通过 axios 带 token 下载 blob，生成 object URL
- */
 export async function previewFile(id: number): Promise<string> {
   const response = await api.get(`/api/v1/files/${id}/preview`, {
     responseType: 'blob',
@@ -77,9 +74,6 @@ export async function previewFile(id: number): Promise<string> {
   return URL.createObjectURL(response.data)
 }
 
-/**
- * 下载文件: 通过 axios 带 token 下载 blob，触发浏览器下载
- */
 export async function downloadFile(id: number, filename: string): Promise<void> {
   const response = await api.get(`/api/v1/files/${id}/download`, {
     responseType: 'blob',
@@ -91,5 +85,6 @@ export async function downloadFile(id: number, filename: string): Promise<void> 
   document.body.appendChild(a)
   a.click()
   document.body.removeChild(a)
-  URL.revokeObjectURL(url)
+  // 延迟清理，避免 Safari/移动端下载未完成就被 revoke 导致 0 字节
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
 }

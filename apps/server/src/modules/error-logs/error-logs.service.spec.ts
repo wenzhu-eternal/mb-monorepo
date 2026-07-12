@@ -84,7 +84,7 @@ describe('ErrorLogsService', () => {
 
     it('白名单未命中时入库', async () => {
       redisServiceMock.get.mockResolvedValue(null)
-      // 模拟白名单查询返回空数组
+      // 返回空数组
       vi.mocked(mockDb.select).mockReturnValue({
         from: vi.fn().mockReturnValue({
           where: vi.fn().mockResolvedValue([]),
@@ -194,11 +194,8 @@ describe('ErrorLogsService', () => {
 
       const result = await service.findWhitelist()
 
-      // 返回缓存内容
       expect(result).toEqual(cachedList)
-      // 不应触发 db.select 查询白名单
       expect(mockDb.select).not.toHaveBeenCalled()
-      // 不应再写缓存
       expect(redisServiceMock.set).not.toHaveBeenCalled()
     })
 
@@ -215,9 +212,7 @@ describe('ErrorLogsService', () => {
 
       const result = await service.findWhitelist()
 
-      // 返回查库结果
       expect(result).toEqual(dbList)
-      // 应该尝试写缓存
       expect(redisServiceMock.set).toHaveBeenCalledWith(
         'error:whitelist:all',
         JSON.stringify(dbList),
@@ -238,7 +233,6 @@ describe('ErrorLogsService', () => {
       const result = await service.createWhitelist({ pattern: 'ECONNRESET' })
 
       expect(result).toEqual(created)
-      // 失效缓存: 调用 redis del
       expect(redisServiceMock.del).toHaveBeenCalledWith('error:whitelist:all')
     })
   })

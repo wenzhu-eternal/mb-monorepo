@@ -18,7 +18,6 @@ import { AuthService, type TokenPayload } from '@/modules/auth/auth.service'
 import { HttpClientService } from '@/modules/http-client/http-client.service'
 import { RedisService } from '@/modules/redis/redis.service'
 
-// 微信 API 响应结构
 interface WechatAccessTokenResponse {
   access_token: string
   expires_in: number
@@ -67,7 +66,6 @@ export class WechatService {
   private readonly secret?: string
   private readonly enabled: boolean
 
-  // state 在 Redis 中保留 5 分钟
   private static readonly STATE_TTL = 300
 
   constructor(
@@ -80,14 +78,12 @@ export class WechatService {
     this.secret = this.configService.get<string>('WEAPP_SECRET')
     this.enabled = !!(this.appid && this.secret)
 
-    // 网站扫码登录用 api.weixin.qq.com/sns/...
     this.qrcodeInstance = this.httpClient.createInstance({
       baseURL: 'https://api.weixin.qq.com',
       timeout: 10000,
       maxRetries: 2,
     })
 
-    // 小程序 code2Session 用 api.weixin.qq.com/sns/jscode2session
     this.miniprogramInstance = this.httpClient.createInstance({
       baseURL: 'https://api.weixin.qq.com',
       timeout: 10000,
@@ -242,7 +238,6 @@ export class WechatService {
       return existing
     }
 
-    // 新建微信用户
     const username = `wx_${openId.slice(0, 8)}`
     const email = `${username}@wechat.placeholder`
     try {

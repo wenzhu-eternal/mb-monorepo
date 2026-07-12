@@ -60,7 +60,6 @@ export class SetupService {
 
     try {
       await db.transaction(async (tx) => {
-        // 创建默认角色（若已存在则跳过）
         const createdRoles = await tx
           .insert(roles)
           .values(DEFAULT_ROLES)
@@ -77,7 +76,6 @@ export class SetupService {
           throw new BadRequestException('默认角色创建失败')
         }
 
-        // 创建 admin 用户并关联 admin 角色
         await tx.insert(users).values({
           username: input.username,
           email: input.email,

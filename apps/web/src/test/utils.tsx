@@ -2,9 +2,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { renderHook, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 
-/**
- * 创建带 QueryClientProvider 的 test wrapper
- */
 export function createQueryWrapper() {
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -20,9 +17,6 @@ export function createQueryWrapper() {
   return { queryClient, Wrapper }
 }
 
-/**
- * 渲染 hook 并自动包装 QueryClientProvider
- */
 export function renderHookWithQuery<T>(hook: () => T) {
   const { queryClient, Wrapper } = createQueryWrapper()
   const result = renderHook(hook, { wrapper: Wrapper })

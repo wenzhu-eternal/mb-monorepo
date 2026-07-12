@@ -30,11 +30,21 @@ async function enableMocking() {
 
 const rootElement = document.getElementById('root')!
 
-enableMocking().then(() => {
-  installGlobalErrorHandlers()
-  ReactDOM.createRoot(rootElement).render(
-    <React.StrictMode>
-      <RouterProvider router={router} />
-    </React.StrictMode>,
-  )
-})
+// 先注册全局错误处理器，再启动 mock，避免 mock 启动失败时错误无人接管
+installGlobalErrorHandlers()
+enableMocking()
+  .then(() => {
+    ReactDOM.createRoot(rootElement).render(
+      <React.StrictMode>
+        <RouterProvider router={router} />
+      </React.StrictMode>,
+    )
+  })
+  .catch((err) => {
+    console.error('[bootstrap] mock 启动失败，跳过 mock 直接渲染:', err)
+    ReactDOM.createRoot(rootElement).render(
+      <React.StrictMode>
+        <RouterProvider router={router} />
+      </React.StrictMode>,
+    )
+  })

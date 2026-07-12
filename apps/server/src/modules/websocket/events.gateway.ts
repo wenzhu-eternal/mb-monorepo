@@ -80,9 +80,6 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.logger.log(`用户 ${userId} 已断开 (socket: ${client.id})`)
   }
 
-  /**
-   * 客户端心跳
-   */
   @SubscribeMessage('ping')
   handlePing(@MessageBody() data: unknown): { event: string; data: unknown } {
     return { event: 'pong', data }
@@ -100,9 +97,6 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     return { event: 'notification:read:ack', data: { ok: !!data?.id } }
   }
 
-  /**
-   * 推送消息给指定用户
-   */
   pushToUser(userId: number, event: string, data: unknown): void {
     const sockets = this.onlineUsers.get(userId)
     if (!sockets || sockets.size === 0) return
@@ -112,23 +106,14 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-  /**
-   * 广播消息给所有在线用户
-   */
   pushAll(event: string, data: unknown): void {
     this.server.emit(event, data)
   }
 
-  /**
-   * 获取在线用户 ID 列表
-   */
   getOnlineUserIds(): number[] {
     return Array.from(this.onlineUsers.keys())
   }
 
-  /**
-   * 检查用户是否在线
-   */
   isUserOnline(userId: number): boolean {
     const sockets = this.onlineUsers.get(userId)
     return !!sockets && sockets.size > 0
@@ -139,7 +124,6 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
    * 兼容 query.userId（仅当未配置 JWT 时降级，便于开发调试）
    */
   private extractUserId(client: Socket): number | null {
-    // 优先: auth.token = <accessToken>
     const authToken = (client.handshake.auth as { token?: string } | undefined)?.token
     if (authToken) {
       try {

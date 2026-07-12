@@ -22,9 +22,6 @@ export class RedisService implements OnModuleDestroy {
     })
   }
 
-  /**
-   * 健康检查: PING Redis
-   */
   async ping(): Promise<boolean> {
     try {
       const res = await this.client.ping()

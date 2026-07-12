@@ -81,7 +81,6 @@ export function useWebSocketDemo() {
     enabled: isAuthenticated,
   })
 
-  // 当前用户在线状态
   const meQuery = useQuery({
     queryKey: ['websocket', 'me'],
     queryFn: async () => {
@@ -91,7 +90,6 @@ export function useWebSocketDemo() {
     enabled: isAuthenticated,
   })
 
-  // 监听实时推送
   useEffect(() => {
     const onNotification = (data: unknown) => {
       const notification = data as Notification
@@ -110,7 +108,6 @@ export function useWebSocketDemo() {
     const onPresenceUpdate = (data: unknown) => {
       const { userId, online } = data as { userId: number; online: boolean }
 
-      // 增量更新在线用户列表
       queryClient.setQueryData<OnlineResponse>(['websocket', 'online'], (old) => {
         if (!old) return old
         const set = new Set(old.userIds)
@@ -122,7 +119,6 @@ export function useWebSocketDemo() {
         return { count: set.size, userIds: Array.from(set) }
       })
 
-      // 增量更新当前用户在线状态
       queryClient.setQueryData<MeResponse>(['websocket', 'me'], (old) => {
         if (!old) return old
         return old.userId === userId ? { ...old, online } : old
@@ -135,7 +131,6 @@ export function useWebSocketDemo() {
     }
   }, [isAuthenticated, queryClient])
 
-  // 发送测试通知
   const sendNotify = useMutation({
     mutationFn: async (input: {
       userId: number

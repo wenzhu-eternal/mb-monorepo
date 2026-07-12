@@ -15,7 +15,6 @@ DB_USER="monoforge_user"
 DB_NAME="monoforge_database"
 BACKUP_DIR="apps/server/backups"
 
-# 确定备份文件
 if [ -n "$1" ]; then
   BACKUP_FILE="$1"
 else

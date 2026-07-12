@@ -51,28 +51,22 @@ export class FilesService {
       throw new NotFoundException('文件未上传')
     }
 
-    // 1. 文件名 + 大小 + MIME + 扩展名校验
     validateFilename(file.originalname)
     validateFileSize(file.size)
     validateMimeType(file.mimetype)
     validateExtension(file.originalname)
 
-    // 2. 路径穿越防护
     if (!isPathSafe(file.path, UPLOAD_DIR)) {
       throw new ForbiddenException('文件路径非法')
     }
 
-    // 3. magic number 校验
     const ext = file.originalname.split('.').pop()?.toLowerCase() ?? ''
     await validateFileContent(file.path, ext)
 
-    // 4. 恶意内容扫描
     await scanForMalware(file.path)
 
-    // 5. 生成安全文件名并重命名（diskStorage 已用 filename 函数处理，这里直接用）
     const safeFilename = generateSafeFilename(file.originalname)
 
-    // 6. 入库
     const [created] = await db
       .insert(files)
       .values({
@@ -159,15 +153,12 @@ export class FilesService {
       throw new ForbiddenException('无权删除他人上传的文件')
     }
 
-    // 软删除: 设置 deletedAt 时间戳，不删除磁盘文件
+    // 不删除磁盘文件
     await db.update(files).set({ deletedAt: new Date() }).where(eq(files.id, id))
 
     return { message: `文件 ID ${id} 已删除` }
   }
 
-  /**
-   * 确保上传目录存在
-   */
   async ensureUploadDir(): Promise<void> {
     await mkdir(UPLOAD_DIR, { recursive: true })
   }

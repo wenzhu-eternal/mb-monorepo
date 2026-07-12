@@ -1,7 +1,8 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { Button, Divider, Form, Input, Modal, message, Typography } from 'antd'
+import { Button, Form, Input, message, Tabs, Typography } from 'antd'
 import { useState } from 'react'
-import { useLogin, useWechatLogin, useWechatQrCode, useWechatStatus } from '@/hooks/use-auth'
+import { useLogin } from '@/hooks/use-auth'
+import { useRegister, useSendRegisterCode } from '@/hooks/use-register'
 import { extractErrorMessage } from '@/lib/error'
 
 const { Title } = Typography
@@ -12,18 +13,23 @@ export const Route = createFileRoute('/login')({
 
 function LoginPage() {
   const loginMutation = useLogin()
+  const registerMutation = useRegister()
+  const sendCodeMutation = useSendRegisterCode()
   const navigate = useNavigate()
   const [messageApi, contextHolder] = message.useMessage()
-  const [form] = Form.useForm<{ username: string; password: string }>()
+  const [activeTab, setActiveTab] = useState<'login' | 'register'>('login')
+  const [countdown, setCountdown] = useState(0)
 
-  // 微信登录相关
-  const { data: wechatStatus } = useWechatStatus()
-  const qrCodeMutation = useWechatQrCode()
-  const wechatLoginMutation = useWechatLogin()
-  const [qrModalOpen, setQrModalOpen] = useState(false)
-  const [qrUrl, setQrUrl] = useState<string | null>(null)
+  const [loginForm] = Form.useForm<{ username: string; password: string }>()
+  const [registerForm] = Form.useForm<{
+    email: string
+    code: string
+    username: string
+    password: string
+    confirmPassword: string
+  }>()
 
-  const onSubmit = async (values: { username: string; password: string }) => {
+  const onLoginSubmit = async (values: { username: string; password: string }) => {
     try {
       await loginMutation.mutateAsync(values)
       messageApi.success('登录成功')
@@ -33,31 +39,52 @@ function LoginPage() {
     }
   }
 
-  const onWechatLogin = async () => {
+  const onSendCode = async () => {
     try {
-      const data = await qrCodeMutation.mutateAsync()
-      setQrUrl(data.qrCodeUrl)
-      setQrModalOpen(true)
-      messageApi.info('请使用微信扫码登录，扫完后请在跳转页面拿 code 回填')
+      const email = registerForm.getFieldValue('email')
+      await registerForm.validateFields(['email'])
+      await sendCodeMutation.mutateAsync({ email })
+      messageApi.success('验证码已发送')
+      setCountdown(60)
+      const timer = setInterval(() => {
+        setCountdown((prev) => {
+          if (prev <= 1) {
+            clearInterval(timer)
+            return 0
+          }
+          return prev - 1
+        })
+      }, 1000)
     } catch (error: unknown) {
-      messageApi.error(extractErrorMessage(error, '获取二维码失败'))
+      if (error && typeof error === 'object' && 'errorFields' in error) {
+        return
+      }
+      messageApi.error(extractErrorMessage(error, '发送验证码失败'))
     }
   }
 
-  // 扫码后用户拿到的 code 回填登录（简化版: 手动粘贴 code）
-  const [codeInput, setCodeInput] = useState('')
-  const onCodeSubmit = async () => {
-    if (!codeInput.trim()) {
-      messageApi.error('请输入微信回调返回的 code')
-      return
-    }
+  const onRegisterSubmit = async (values: {
+    email: string
+    code: string
+    username: string
+    password: string
+    confirmPassword: string
+  }) => {
     try {
-      await wechatLoginMutation.mutateAsync({ code: codeInput.trim(), loginType: 'qrcode' })
-      messageApi.success('微信登录成功')
-      setQrModalOpen(false)
+      if (values.password !== values.confirmPassword) {
+        messageApi.error('两次输入的密码不一致')
+        return
+      }
+      await registerMutation.mutateAsync({
+        email: values.email,
+        code: values.code,
+        username: values.username,
+        password: values.password,
+      })
+      messageApi.success('注册成功')
       navigate({ to: '/dashboard' })
     } catch (error: unknown) {
-      messageApi.error(extractErrorMessage(error, '微信登录失败'))
+      messageApi.error(extractErrorMessage(error, '注册失败'))
     }
   }
 
@@ -66,76 +93,150 @@ function LoginPage() {
       {contextHolder}
       <div className="w-full max-w-md p-8 bg-white rounded-lg shadow-md">
         <Title level={2} className="text-center mb-8">
-          MonoForge 管理后台登录
+          MonoForge 管理后台
         </Title>
-        <Form form={form} onFinish={onSubmit} layout="vertical" autoComplete="off">
-          <Form.Item
-            label="用户名"
-            name="username"
-            rules={[
-              { required: true, message: '请输入用户名' },
-              { min: 3, max: 50, message: '用户名长度 3-50 个字符' },
-            ]}
-          >
-            <Input placeholder="请输入用户名" />
-          </Form.Item>
-          <Form.Item
-            label="密码"
-            name="password"
-            rules={[
-              { required: true, message: '请输入密码' },
-              { min: 6, max: 100, message: '密码至少 6 个字符' },
-            ]}
-          >
-            <Input.Password placeholder="请输入密码" />
-          </Form.Item>
-          <Form.Item>
-            <Button type="primary" htmlType="submit" loading={loginMutation.isPending} block>
-              登录
-            </Button>
-          </Form.Item>
-        </Form>
-
-        {wechatStatus?.enabled && (
-          <>
-            <Divider plain>或</Divider>
-            <Button block onClick={onWechatLogin} loading={qrCodeMutation.isPending}>
-              微信扫码登录
-            </Button>
-          </>
-        )}
+        <Tabs
+          activeKey={activeTab}
+          onChange={(key) => setActiveTab(key as 'login' | 'register')}
+          centered
+          items={[
+            {
+              key: 'login',
+              label: '登录',
+              children: (
+                <Form
+                  form={loginForm}
+                  onFinish={onLoginSubmit}
+                  layout="vertical"
+                  autoComplete="off"
+                >
+                  <Form.Item
+                    label="用户名"
+                    name="username"
+                    rules={[
+                      { required: true, message: '请输入用户名' },
+                      { min: 3, max: 50, message: '用户名长度 3-50 个字符' },
+                    ]}
+                  >
+                    <Input placeholder="请输入用户名" />
+                  </Form.Item>
+                  <Form.Item
+                    label="密码"
+                    name="password"
+                    rules={[
+                      { required: true, message: '请输入密码' },
+                      { min: 6, max: 100, message: '密码至少 6 个字符' },
+                    ]}
+                  >
+                    <Input.Password placeholder="请输入密码" />
+                  </Form.Item>
+                  <Form.Item>
+                    <Button
+                      type="primary"
+                      htmlType="submit"
+                      loading={loginMutation.isPending}
+                      block
+                    >
+                      登录
+                    </Button>
+                  </Form.Item>
+                </Form>
+              ),
+            },
+            {
+              key: 'register',
+              label: '注册',
+              children: (
+                <Form
+                  form={registerForm}
+                  onFinish={onRegisterSubmit}
+                  layout="vertical"
+                  autoComplete="off"
+                >
+                  <Form.Item
+                    label="邮箱"
+                    name="email"
+                    rules={[
+                      { required: true, message: '请输入邮箱' },
+                      { type: 'email', message: '请输入有效的邮箱地址' },
+                    ]}
+                  >
+                    <Input placeholder="请输入邮箱" />
+                  </Form.Item>
+                  <Form.Item label="验证码" required>
+                    <div className="flex gap-2">
+                      <Form.Item
+                        name="code"
+                        noStyle
+                        rules={[
+                          { required: true, message: '请输入验证码' },
+                          { len: 6, message: '验证码为 6 位数字' },
+                        ]}
+                      >
+                        <Input placeholder="请输入验证码" className="flex-1" />
+                      </Form.Item>
+                      <Button
+                        onClick={onSendCode}
+                        loading={sendCodeMutation.isPending}
+                        disabled={countdown > 0}
+                      >
+                        {countdown > 0 ? `${countdown}s` : '发送验证码'}
+                      </Button>
+                    </div>
+                  </Form.Item>
+                  <Form.Item
+                    label="用户名"
+                    name="username"
+                    rules={[
+                      { required: true, message: '请输入用户名' },
+                      { min: 3, max: 50, message: '用户名长度 3-50 个字符' },
+                    ]}
+                  >
+                    <Input placeholder="请输入用户名" />
+                  </Form.Item>
+                  <Form.Item
+                    label="密码"
+                    name="password"
+                    rules={[
+                      { required: true, message: '请输入密码' },
+                      { min: 6, max: 100, message: '密码至少 6 个字符' },
+                    ]}
+                  >
+                    <Input.Password placeholder="请输入密码" />
+                  </Form.Item>
+                  <Form.Item
+                    label="确认密码"
+                    name="confirmPassword"
+                    rules={[
+                      { required: true, message: '请确认密码' },
+                      ({ getFieldValue }) => ({
+                        validator(_, value) {
+                          if (!value || getFieldValue('password') === value) {
+                            return Promise.resolve()
+                          }
+                          return Promise.reject(new Error('两次输入的密码不一致'))
+                        },
+                      }),
+                    ]}
+                  >
+                    <Input.Password placeholder="请确认密码" />
+                  </Form.Item>
+                  <Form.Item>
+                    <Button
+                      type="primary"
+                      htmlType="submit"
+                      loading={registerMutation.isPending}
+                      block
+                    >
+                      注册
+                    </Button>
+                  </Form.Item>
+                </Form>
+              ),
+            },
+          ]}
+        />
       </div>
-
-      <Modal
-        title="微信扫码登录"
-        open={qrModalOpen}
-        onCancel={() => setQrModalOpen(false)}
-        footer={null}
-      >
-        {qrUrl && (
-          <div className="flex flex-col items-center gap-4 py-4">
-            <iframe
-              src={qrUrl}
-              title="微信扫码"
-              className="w-full h-64 border-0"
-              sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-            />
-            <p className="text-sm text-gray-500 text-center">
-              扫码并在微信中确认后，请把回调 URL 中的 code 参数复制到下方完成登录
-            </p>
-            <div className="flex gap-2 w-full">
-              <Input
-                placeholder="粘贴微信回调返回的 code"
-                value={codeInput}
-                onChange={(e) => setCodeInput(e.target.value)}
-              />
-              <Button type="primary" onClick={onCodeSubmit} loading={wechatLoginMutation.isPending}>
-                登录
-              </Button>
-            </div>
-          </div>
-        )}
-      </Modal>
     </div>
   )
 }

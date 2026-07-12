@@ -53,8 +53,21 @@ export const RegisterSchema = z.object({
   nickname: z.string().max(50).optional(),
 })
 
+export const RegisterWithCodeSchema = z.object({
+  username: z.string().min(3).max(50),
+  email: z.string().email(),
+  password: z.string().min(6).max(100),
+  code: z.string().length(6, '验证码为 6 位数字'),
+})
+
+export const SendRegisterCodeSchema = z.object({
+  email: z.string().email(),
+})
+
 export type User = z.infer<typeof UserSchema>
 export type CreateUser = z.infer<typeof CreateUserSchema>
 export type UpdateUser = z.infer<typeof UpdateUserSchema>
 export type Login = z.infer<typeof LoginSchema>
 export type Register = z.infer<typeof RegisterSchema>
+export type RegisterWithCode = z.infer<typeof RegisterWithCodeSchema>
+export type SendRegisterCode = z.infer<typeof SendRegisterCodeSchema>

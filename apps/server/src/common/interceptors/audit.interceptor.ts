@@ -16,14 +16,12 @@ import { AuditService } from '@/modules/audit/audit.service'
 export const AUDIT_ACTION_KEY = 'audit_action'
 export const AUDIT_RESOURCE_KEY = 'audit_resource'
 
-// HTTP 方法到中文动作的映射
 const ACTION_MAP: Record<string, string> = {
   POST: '创建',
   PATCH: '更新',
   DELETE: '删除',
 }
 
-// Controller 类名到中文资源的映射
 const RESOURCE_MAP: Record<string, string> = {
   AuthController: '认证',
   UsersController: '用户',
@@ -72,7 +70,6 @@ export class AuditInterceptor implements NestInterceptor {
       this.reflector.get<string>(AUDIT_RESOURCE_KEY, context.getHandler()) ??
       context.getClass().name
 
-    // 转换为中文
     const action = ACTION_MAP[rawAction] ?? rawAction
     const resource = RESOURCE_MAP[rawResource] ?? rawResource
 
@@ -127,7 +124,7 @@ export class AuditInterceptor implements NestInterceptor {
 
       if (result.length === 0) return undefined
 
-      // 转换为普通对象，移除敏感字段
+      // 移除敏感字段
       const oldData = { ...result[0] }
       if ('password' in oldData) {
         delete (oldData as Record<string, unknown>).password

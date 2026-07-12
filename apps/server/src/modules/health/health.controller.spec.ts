@@ -46,7 +46,6 @@ describe('HealthController', () => {
 
       vi.mocked(service.check).mockResolvedValue(mockResult)
 
-      // DB 异常时控制器抛 503，便于探针据此重启
       await expect(controller.check()).rejects.toThrow(ServiceUnavailableException)
       expect(service.check).toHaveBeenCalledOnce()
     })

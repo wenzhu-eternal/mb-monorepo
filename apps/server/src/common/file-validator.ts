@@ -1,10 +1,8 @@
 import { open } from 'node:fs/promises'
 import { BadRequestException } from '@nestjs/common'
 
-// 文件大小限制: 10MB
 export const MAX_FILE_SIZE = 10 * 1024 * 1024
 
-// 允许的 MIME 类型白名单
 export const ALLOWED_MIME_TYPES = [
   'image/jpeg',
   'image/png',
@@ -20,7 +18,6 @@ export const ALLOWED_MIME_TYPES = [
   'application/x-sql',
 ]
 
-// 允许的扩展名白名单
 export const ALLOWED_EXTENSIONS = [
   'jpg',
   'jpeg',
@@ -65,7 +62,6 @@ export const DANGEROUS_EXTENSIONS = [
   'pl',
 ]
 
-// magic number 签名表
 const MAGIC_NUMBERS: Array<{ ext: string; bytes: number[] }> = [
   { ext: 'jpg', bytes: [0xff, 0xd8, 0xff] },
   { ext: 'png', bytes: [0x89, 0x50, 0x4e, 0x47] },
@@ -73,7 +69,6 @@ const MAGIC_NUMBERS: Array<{ ext: string; bytes: number[] }> = [
   { ext: 'pdf', bytes: [0x25, 0x50, 0x44, 0x46] },
 ]
 
-// 恶意内容模式
 const MALICIOUS_PATTERNS = [/<script[\s\S]*?>/i, /javascript:/i, /\son\w+\s*=/i, /data:text\/html/i]
 
 /**
@@ -109,9 +104,6 @@ export function validateFilename(filename: string): void {
   }
 }
 
-/**
- * 校验文件大小
- */
 export function validateFileSize(size: number): void {
   if (size <= 0) {
     throw new BadRequestException('文件为空')
@@ -121,18 +113,12 @@ export function validateFileSize(size: number): void {
   }
 }
 
-/**
- * 校验 MIME 类型
- */
 export function validateMimeType(mimeType: string): void {
   if (!ALLOWED_MIME_TYPES.includes(mimeType)) {
     throw new BadRequestException(`不允许的文件类型: ${mimeType}`)
   }
 }
 
-/**
- * 校验扩展名
- */
 export function validateExtension(filename: string): void {
   const ext = filename.split('.').pop()?.toLowerCase() ?? ''
   if (!ext || !ALLOWED_EXTENSIONS.includes(ext)) {
@@ -147,7 +133,6 @@ export function validateExtension(filename: string): void {
 export async function validateFileContent(filePath: string, declaredExt: string): Promise<void> {
   const expected = MAGIC_NUMBERS.find((m) => m.ext === declaredExt)
   if (!expected) {
-    // 非需 magic number 校验的扩展名，跳过
     return
   }
 
@@ -167,9 +152,6 @@ export async function validateFileContent(filePath: string, declaredExt: string)
   }
 }
 
-/**
- * 扫描恶意内容（HTML/JS 注入）
- */
 export async function scanForMalware(filePath: string): Promise<void> {
   try {
     // 只读前 64KB 进行扫描（恶意脚本通常在头部）

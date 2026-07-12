@@ -4,14 +4,16 @@ import type { ColumnsType } from 'antd/es/table'
 import { useEffect, useState } from 'react'
 import { type AuditLog, useAuditLogs } from '@/hooks/use-logs'
 import { AuthenticatedLayout } from '@/layouts/authenticated-layout'
+import { Permissions } from '@/lib/permissions'
+import { requirePermission } from '@/lib/route-guards'
 
 const { Title, Text } = Typography
 
 export const Route = createFileRoute('/audit-logs')({
+  beforeLoad: requirePermission(Permissions.AUDIT_VIEW),
   component: AuditLogsPage,
 })
 
-// 解析 UserAgent 字符串，提取关键信息
 function parseUserAgent(ua: string | null): { browser: string; os: string } {
   if (!ua) return { browser: '-', os: '-' }
 

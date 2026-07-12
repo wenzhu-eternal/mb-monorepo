@@ -23,7 +23,6 @@ function SetupPage() {
     nickname?: string
   }>()
 
-  // 已初始化则跳转登录页
   useEffect(() => {
     if (!isLoading && status?.initialized) {
       navigate({ to: '/login', replace: true })
@@ -39,7 +38,6 @@ function SetupPage() {
     try {
       await setupMutation.mutateAsync(values)
       messageApi.success('系统初始化成功，请登录')
-      // 初始化成功后跳转登录
       navigate({ to: '/login', replace: true })
     } catch (error: unknown) {
       messageApi.error(extractErrorMessage(error, '初始化失败'))

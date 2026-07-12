@@ -41,9 +41,7 @@ export class CacheService {
   async delByPattern(pattern: string): Promise<void> {
     try {
       await this.redisService.deleteByPattern(pattern)
-    } catch {
-      // 忽略
-    }
+    } catch {}
   }
 
   /**

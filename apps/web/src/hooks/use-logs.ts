@@ -9,7 +9,6 @@ export interface LogQuery {
   keyword?: string
 }
 
-// 审计日志
 export interface AuditLog {
   id: number
   userId: number
@@ -37,7 +36,6 @@ export const useAuditLogs = (params: LogQuery) => {
   })
 }
 
-// 错误日志
 export interface ErrorLog {
   id: number
   source: string
@@ -160,8 +158,6 @@ export const useDeleteErrorLog = () => {
   })
 }
 
-// ===== 错误日志白名单 =====
-
 export interface ErrorWhitelist {
   id: number
   pattern: string
@@ -240,7 +236,6 @@ export const useDeleteWhitelist = () => {
   })
 }
 
-// 角色
 export interface Role {
   id: number
   name: string

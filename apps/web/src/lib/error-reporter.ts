@@ -21,9 +21,7 @@ interface ReportErrorPayload {
 export async function reportFrontendError(payload: ReportErrorPayload): Promise<void> {
   try {
     await api.post('/api/v1/error-logs/report', payload)
-  } catch {
-    // 静默失败，不影响用户
-  }
+  } catch {}
 }
 
 /**
@@ -31,7 +29,6 @@ export async function reportFrontendError(payload: ReportErrorPayload): Promise<
  * 捕获 JS 运行时错误、未处理 Promise 异常、资源加载失败
  */
 export function installGlobalErrorHandlers(): void {
-  // JS 运行时错误
   window.onerror = (message, source, lineno, colno, error) => {
     reportFrontendError({
       source: 'frontend',
@@ -45,7 +42,6 @@ export function installGlobalErrorHandlers(): void {
     })
   }
 
-  // 未处理 Promise 异常
   window.addEventListener('unhandledrejection', (event) => {
     const reason = event.reason
     reportFrontendError({
@@ -57,7 +53,7 @@ export function installGlobalErrorHandlers(): void {
     })
   })
 
-  // 资源加载失败（图片、脚本、样式等）
+  // IMG/SCRIPT/LINK
   window.addEventListener(
     'error',
     (event) => {

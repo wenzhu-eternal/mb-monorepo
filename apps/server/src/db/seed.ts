@@ -1,16 +1,15 @@
 import { config } from 'dotenv'
 import { eq } from 'drizzle-orm'
 import { db } from './index'
-import { errorWhitelist, permissions, rolePermissions, roles, users } from './schema'
+import { permissions, rolePermissions, roles, users } from './schema'
 
 // 显式加载根目录 .env，与 db/index.ts 保持一致，避免从 cwd 加载到错误文件
 config({ path: '../../.env' })
 
-// argon2 hash for password "admin123"
+// argon2 hash for password "888888"
 const ADMIN_PASSWORD_HASH =
-  '$argon2id$v=19$m=65536,t=3,p=4$Bg27npZWqewGK3lVzGxg3Q$FLi41Lj2tS0ZVMmFmiQqxIwqmDmvQAeMa0MRuDrXGkk'
+  '$argon2id$v=19$m=65536,t=3,p=4$+E4yDP+3tFn0YFmWgFZ43w$kFbMB7TU6sbsCmWlFARR3wPWFqwqr/Mwr3vOK1ONHbA'
 
-// 默认权限列表
 const defaultPermissions = [
   {
     code: 'user:view',
@@ -144,12 +143,11 @@ async function seed() {
   }
   console.log('Default permissions seeded')
 
-  // 创建 admin 角色
   const [adminRole] = await db
     .insert(roles)
     .values({
       name: 'admin',
-      description: 'System administrator with full access',
+      description: '系统管理员，拥有全部权限',
     })
     .onConflictDoNothing()
     .returning()
@@ -162,6 +160,33 @@ async function seed() {
 
   console.log('Admin role ready:', role)
 
+  // 创建普通用户角色（通过注册进来的用户）
+  const [userRole] = await db
+    .insert(roles)
+    .values({
+      name: 'user',
+      description: '普通用户，通过注册进入系统',
+    })
+    .onConflictDoNothing()
+    .returning()
+
+  const userRoleRecord =
+    userRole ?? (await db.query.roles.findFirst({ where: eq(roles.name, 'user') }))
+
+  if (userRoleRecord) {
+    // 普通用户：用户查看 + 邮件发送
+    await db
+      .insert(rolePermissions)
+      .values([
+        { roleId: userRoleRecord.id, permission: 'user:view' },
+        { roleId: userRoleRecord.id, permission: 'mail:send' },
+      ])
+      .onConflictDoNothing()
+    console.log('User role permissions assigned')
+  }
+
+  console.log('User role ready:', userRole ?? 'already exists')
+
   // 为 admin 角色分配所有权限（使用权限码字符串）
   for (const perm of defaultPermissions) {
     await db
@@ -171,14 +196,13 @@ async function seed() {
   }
   console.log('Admin permissions assigned')
 
-  // 创建默认管理员用户
   const [adminUser] = await db
     .insert(users)
     .values({
       username: 'admin',
-      email: 'admin@example.com',
+      email: 'travel_car@163.com',
       password: ADMIN_PASSWORD_HASH,
-      nickname: 'Administrator',
+      nickname: '文竹',
       roleId: role.id,
       status: true,
     })
@@ -186,31 +210,6 @@ async function seed() {
     .returning()
 
   console.log('Created admin user:', adminUser)
-
-  // 创建初始错误白名单
-  const whitelistEntries = await db
-    .insert(errorWhitelist)
-    .values([
-      {
-        pattern: 'ECONNREFUSED',
-        description: 'Database connection refused - ignore during startup',
-        isActive: true,
-      },
-      {
-        pattern: 'ETIMEDOUT',
-        description: 'Connection timeout - temporary network issues',
-        isActive: true,
-      },
-      {
-        pattern: 'healthcheck',
-        description: 'Health check endpoint errors',
-        isActive: false,
-      },
-    ])
-    .onConflictDoNothing()
-    .returning()
-
-  console.log('Error whitelist entries:', whitelistEntries.length ? 'created' : 'already exist')
 
   console.log('Database seeded successfully!')
 }

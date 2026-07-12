@@ -42,10 +42,13 @@ import {
 } from '@/hooks/use-logs'
 import { AuthenticatedLayout } from '@/layouts/authenticated-layout'
 import { extractErrorMessage } from '@/lib/error'
+import { Permissions } from '@/lib/permissions'
+import { requirePermission } from '@/lib/route-guards'
 
 const { Title, Text, Paragraph } = Typography
 
 export const Route = createFileRoute('/error-logs')({
+  beforeLoad: requirePermission(Permissions.ERROR_LOG_VIEW),
   component: ErrorLogsPage,
 })
 
@@ -72,8 +75,6 @@ function ErrorLogsPage() {
     </AuthenticatedLayout>
   )
 }
-
-// ===== 错误日志 Tab =====
 
 function LogsTab() {
   const [page, setPage] = useState(1)
@@ -508,8 +509,6 @@ function LogsTab() {
     </>
   )
 }
-
-// ===== 白名单 Tab =====
 
 interface WhitelistFormValues {
   pattern: string

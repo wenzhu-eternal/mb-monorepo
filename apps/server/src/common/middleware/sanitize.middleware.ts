@@ -59,7 +59,6 @@ export class SanitizeMiddleware implements NestMiddleware {
   }
 }
 
-// 扩展 Express Request 类型
 declare module 'express' {
   interface Request {
     sanitizedBody?: unknown

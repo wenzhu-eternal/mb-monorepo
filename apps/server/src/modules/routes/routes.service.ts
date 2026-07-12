@@ -47,7 +47,6 @@ export class RoutesService {
 
       const controllerName = wrapper.metatype?.name ?? 'UnknownController'
 
-      // 遍历 controller 原型上的方法
       const proto = Object.getPrototypeOf(instance) as Record<string, unknown>
       for (const handlerName of Object.getOwnPropertyNames(proto)) {
         if (handlerName === 'constructor') continue
@@ -64,7 +63,6 @@ export class RoutesService {
           PATH_METADATA,
           handler as unknown as FunctionConstructor,
         )
-        // METHOD_METADATA 存的是 RequestMethod 数字枚举，需映射为字符串
         const methodEnum = this.reflector.get<number>(
           METHOD_METADATA,
           handler as unknown as FunctionConstructor,

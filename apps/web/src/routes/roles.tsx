@@ -25,10 +25,13 @@ import {
 import { useCreateRole, useDeleteRole, useRoles, useUpdateRole } from '@/hooks/use-roles'
 import { AuthenticatedLayout } from '@/layouts/authenticated-layout'
 import { extractErrorMessage } from '@/lib/error'
+import { Permissions } from '@/lib/permissions'
+import { requirePermission } from '@/lib/route-guards'
 
 const { Title } = Typography
 
 export const Route = createFileRoute('/roles')({
+  beforeLoad: requirePermission(Permissions.ROLE_VIEW),
   component: RolesPage,
 })
 
@@ -209,7 +212,6 @@ function RolesPage() {
         permissions: selectedPermissions,
       })
       messageApi.success('权限更新成功')
-      // 关闭时重置状态，下次打开同一角色走首次同步
       setIsPermissionModalOpen(false)
       setSelectedRoleId(null)
       initializedForRoleId.current = null

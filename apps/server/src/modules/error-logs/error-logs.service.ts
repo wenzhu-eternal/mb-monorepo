@@ -67,7 +67,6 @@ export interface ErrorLogGroup {
   sampleId: number
 }
 
-// 白名单缓存 key 与 TTL
 const WHITELIST_CACHE_KEY = 'error:whitelist:all'
 const WHITELIST_CACHE_TTL = 60
 
@@ -195,7 +194,6 @@ export class ErrorLogsService {
   async findGrouped(limit = 10): Promise<ErrorLogGroup[]> {
     const safeLimit = Math.min(Math.max(1, limit), 50)
 
-    // 子查询: 按 message+source 分组取每组最新记录 id
     const groups = await db
       .select({
         message: errorLogs.message,
@@ -221,9 +219,6 @@ export class ErrorLogsService {
     }))
   }
 
-  /**
-   * 获取错误统计
-   */
   async getStats(): Promise<ErrorStats> {
     const [totalResult] = await db
       .select({ value: count() })
@@ -264,9 +259,6 @@ export class ErrorLogsService {
     }
   }
 
-  /**
-   * 标记错误已处理
-   */
   async resolve(id: number, resolvedBy: number): Promise<{ message: string }> {
     const log = await db.query.errorLogs.findFirst({
       where: and(eq(errorLogs.id, id), notDeleted(errorLogs.deletedAt)),
@@ -325,13 +317,10 @@ export class ErrorLogsService {
       throw new NotFoundException(`错误日志 ID ${id} 不存在`)
     }
 
-    // 软删除: 设置 deletedAt 时间戳
     await db.update(errorLogs).set({ deletedAt: new Date() }).where(eq(errorLogs.id, id))
 
     return { message: `错误日志 ID ${id} 已删除` }
   }
-
-  // ===== 白名单 =====
 
   private async checkWhitelist(message: string, url?: string): Promise<boolean> {
     try {
@@ -460,7 +449,6 @@ export class ErrorLogsService {
       throw new NotFoundException(`白名单 ID ${id} 不存在`)
     }
 
-    // 软删除: 设置 deletedAt 时间戳
     await db.update(errorWhitelist).set({ deletedAt: new Date() }).where(eq(errorWhitelist.id, id))
 
     await this.invalidateWhitelistCache()

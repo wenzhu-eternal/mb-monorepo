@@ -2,7 +2,6 @@ import { z } from 'zod'
 
 const envSchema = z
   .object({
-    // Database
     DATABASE_URL: z.string().url(),
 
     // Redis (optional，未接入使用时可不配置)
@@ -12,11 +11,9 @@ const envSchema = z
     JWT_SECRET: z.string().min(32),
     JWT_REFRESH_SECRET: z.string().min(32),
 
-    // API
     API_PORT: z.coerce.number().default(9000),
     API_PREFIX: z.string().default('/api/v1'),
 
-    // CORS
     ALLOW_ORIGIN: z.string().default('http://localhost:3000'),
 
     // Cookie: 字符串 "true"/"false" 正确转 boolean（z.coerce.boolean() 对非空字符串恒为 true，有 bug）
@@ -25,14 +22,12 @@ const envSchema = z
       .transform((v) => v === true || v === 'true')
       .default(false),
 
-    // Mail (optional)
     MAIL_HOST: z.string().optional(),
     MAIL_PORT: z.coerce.number().optional(),
     MAIL_USER: z.string().optional(),
     MAIL_PASSWORD: z.string().optional(),
     MAIL_FROM: z.string().optional(),
 
-    // WeApp (optional)
     WEAPP_APPID: z.string().optional(),
     WEAPP_SECRET: z.string().optional(),
     // 微信扫码登录回调地址（网站应用 OAuth）
@@ -42,7 +37,6 @@ const envSchema = z
     THROTTLE_TTL: z.coerce.number().default(60),
     THROTTLE_LIMIT: z.coerce.number().default(10),
 
-    // Node env
     NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   })
   .superRefine((data, ctx) => {

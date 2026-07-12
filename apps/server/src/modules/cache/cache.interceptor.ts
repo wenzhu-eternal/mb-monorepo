@@ -29,13 +29,11 @@ export class CacheInterceptor implements NestInterceptor {
     const args = context.getArgs()
     const resolvedKey = this.resolveKey(cacheKey, request, args)
 
-    // 尝试命中缓存
     const cached = await this.cacheService.get(resolvedKey)
     if (cached !== null) {
       return of(cached)
     }
 
-    // 未命中: 执行方法并缓存结果
     return next.handle().pipe(
       tap((data) => {
         // 仅缓存成功响应（data 非空）
@@ -53,7 +51,6 @@ export class CacheInterceptor implements NestInterceptor {
   private resolveKey(key: string, request: unknown, args: unknown[]): string {
     let resolved = key
 
-    // 替换 :param（从路由参数取）
     const req = request as { params?: Record<string, string>; user?: { sub?: number } }
     if (req.params) {
       for (const [paramName, paramValue] of Object.entries(req.params)) {
@@ -61,12 +58,10 @@ export class CacheInterceptor implements NestInterceptor {
       }
     }
 
-    // 替换 :userId（从认证用户取）
     if (req.user?.sub) {
       resolved = resolved.replace(':userId', String(req.user.sub))
     }
 
-    // 替换 :arg0/:arg1（从方法参数取，按位置）
     args.forEach((arg, index) => {
       if (typeof arg === 'number' || typeof arg === 'string') {
         resolved = resolved.replace(`:arg${index}`, String(arg))

@@ -13,9 +13,9 @@ export class XssPipe implements PipeTransform {
 
   private sanitize(value: unknown): unknown {
     if (typeof value === 'string') {
-      // 保留中文/英文/数字/常用标点，清洗 <script>/onerror=/javascript: 等
+      // 移除所有 HTML 标签，清洗 script/onerror/javascript:
       return xss(value, {
-        whiteList: {}, // 移除所有 HTML 标签
+        whiteList: {},
         stripIgnoreTag: true,
         stripIgnoreTagBody: ['script'],
       })

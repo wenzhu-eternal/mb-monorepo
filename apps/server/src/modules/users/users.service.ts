@@ -56,7 +56,6 @@ export class UsersService {
     const total = countResult[0]?.count ?? 0
     const list = items.map((item) => {
       const { ...rest } = item
-      // 如果有角色信息，添加到 roles 数组
       if (item.roleName) {
         return { ...rest, roles: [{ id: item.roleId, name: item.roleName }] }
       }
@@ -205,7 +204,7 @@ export class UsersService {
       const { password: _, ...userWithoutPassword } = updatedUser
       return userWithoutPassword
     } catch (error) {
-      // TOCTOU 兜底: 并发场景下 email 唯一约束冲突转 409
+      // 并发冲突兜底
       if (isUniqueViolation(error)) {
         throw new ConflictException('邮箱已被注册（并发冲突）')
       }
@@ -225,7 +224,6 @@ export class UsersService {
       throw new NotFoundException(ErrorMessages[ErrorCodes.USER_NOT_FOUND])
     }
 
-    // 保护初始管理员账号
     if (existingUser.username === 'admin') {
       throw new ConflictException(ErrorMessages[ErrorCodes.INITIAL_ADMIN_CANNOT_DELETE])
     }
@@ -242,10 +240,8 @@ export class UsersService {
       )
     }
 
-    // 软删除: 设置 deletedAt 时间戳
     await db.update(users).set({ deletedAt: new Date() }).where(eq(users.id, id))
 
-    // 删除后清缓存
     await this.cacheService.delByPattern(`cache:user:*${id}*`)
 
     return { message: `用户 ID ${id} 已删除` }

@@ -7,7 +7,6 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-# 颜色定义
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
@@ -38,9 +37,7 @@ check_warn() {
   WARN=$((WARN + 1))
 }
 
-# ============================================================
 section "1. TypeScript 类型检查"
-# ============================================================
 echo "  → server tsc --noEmit..."
 if pnpm --filter=server exec tsc --noEmit > /tmp/tsc-server.log 2>&1; then
   check_pass "server tsc 通过"
@@ -57,9 +54,7 @@ else
   cat /tmp/tsc-web.log | head -20
 fi
 
-# ============================================================
 section "2. Biome Lint + 格式化检查"
-# ============================================================
 echo "  → biome check..."
 if pnpm lint > /tmp/lint.log 2>&1; then
   check_pass "biome lint 通过"
@@ -68,9 +63,7 @@ else
   cat /tmp/lint.log | head -30
 fi
 
-# ============================================================
 section "3. 软删除过滤审计"
-# ============================================================
 echo "  → 扫描所有 service.ts 中缺失 notDeleted 的查询..."
 
 SOFT_DELETE_ISSUES=""
@@ -78,10 +71,8 @@ SOFT_DELETE_ISSUES=""
 # 排除 audit.service（故意查全量，含已删除记录）
 while IFS= read -r file; do
   while IFS=: read -r line_num _; do
-    # 检查该行及后续 8 行是否有 notDeleted
     if ! sed -n "${line_num},$((line_num + 8))p" "$file" | grep -q 'notDeleted'; then
       content=$(sed -n "${line_num}p" "$file")
-      # 排除注释行
       if ! echo "$content" | grep -qE '^\s*//'; then
         SOFT_DELETE_ISSUES="${SOFT_DELETE_ISSUES}${file}:${line_num}: ${content}\n"
       fi
@@ -96,9 +87,7 @@ else
   echo -e "$SOFT_DELETE_ISSUES"
 fi
 
-# ============================================================
 section "4. 前端 catch 块审计"
-# ============================================================
 echo "  → 扫描前端 tsx 中不读 error 的 catch..."
 
 CATCH_ISSUES=""
@@ -106,7 +95,6 @@ while IFS= read -r file; do
   # 查找 catch { 或 catch (xxx) 但没调用 extractErrorMessage
   BAD_CATCH=$(grep -n -E 'catch\s*(\(\s*\w*\s*\))?\s*\{' "$file" | while IFS= read -r line; do
     LINE_NUM=$(echo "$line" | cut -d: -f1)
-    # 检查后续 3 行是否有 extractErrorMessage
     if ! sed -n "$((LINE_NUM)),$((LINE_NUM + 3))p" "$file" | grep -q 'extractErrorMessage'; then
       echo "$line"
     fi
@@ -128,9 +116,7 @@ else
   echo -e "$CATCH_ISSUES"
 fi
 
-# ============================================================
 section "5. 环境变量完整性"
-# ============================================================
 echo "  → 对比 .env 与 .env.example..."
 
 if [ ! -f apps/server/.env ]; then
@@ -151,14 +137,11 @@ else
   fi
 fi
 
-# ============================================================
 section "6. 依赖安全扫描"
-# ============================================================
 echo "  → pnpm audit --prod..."
 if pnpm audit --prod > /tmp/audit.log 2>&1; then
   check_pass "无已知高危依赖漏洞"
 else
-  # 检查是否有 high/critical 级别漏洞
   if grep -q -E '(high|critical)' /tmp/audit.log; then
     check_fail "发现高危依赖漏洞（见 /tmp/audit.log）"
     grep -E '(high|critical)' /tmp/audit.log | head -10
@@ -167,9 +150,7 @@ else
   fi
 fi
 
-# ============================================================
 section "7. 文档内部链接有效性"
-# ============================================================
 echo "  → 检查 markdown 内部链接..."
 
 DOC_LINK_ISSUES=""
@@ -177,12 +158,10 @@ while IFS= read -r md_file; do
   # 提取 [text](./xxx.md) 或 [text](docs/xxx.md) 格式链接
   while IFS= read -r link; do
     LINK_PATH=$(echo "$link" | sed -E 's/.*\]\(([^)]+)\).*/\1/')
-    # 跳过外部链接和锚点
     if [[ "$LINK_PATH" =~ ^https?:// ]] || [[ "$LINK_PATH" =~ ^# ]]; then
       continue
     fi
 
-    # 计算目标绝对路径
     DIR=$(dirname "$md_file")
     TARGET="$DIR/$LINK_PATH"
 
@@ -199,9 +178,7 @@ else
   echo -e "$DOC_LINK_ISSUES"
 fi
 
-# ============================================================
 section "8. Zod DTO 桥接审计"
-# ============================================================
 echo "  → 扫描 controller 是否有裸 @Body()..."
 
 RAW_BODY_ISSUES=""
@@ -220,9 +197,17 @@ else
   echo -e "$RAW_BODY_ISSUES"
 fi
 
-# ============================================================
+section "9. 废弃 API 调用扫描"
+echo "  → 扫描源码中调用了 @deprecated 符号的位置（IDE 划删除线项）..."
+
+if node scripts/check-deprecated.cjs > /tmp/deprecated.log 2>&1; then
+  check_pass "未发现 @deprecated 调用"
+else
+  check_fail "发现 @deprecated 调用（见 /tmp/deprecated.log）"
+  cat /tmp/deprecated.log | head -20
+fi
+
 # 汇总
-# ============================================================
 section "汇总"
 echo -e "  ${GREEN}通过：${PASS}${NC}  ${YELLOW}警告：${WARN}${NC}  ${RED}失败：${FAIL}${NC}"
 echo ""

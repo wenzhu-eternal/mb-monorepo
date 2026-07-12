@@ -129,6 +129,7 @@ pnpm security   # 等价于 bash scripts/security-check.sh
 6. **依赖安全扫描**：`pnpm audit --prod`
 7. **文档链接有效性**：检查所有 markdown 内部链接指向真实文件
 8. **Zod DTO 桥接审计**：扫描 controller 是否有裸 `@Body()`
+9. **废弃 API 调用扫描**：用 TypeScript compiler API 的 `DiagnosticTag.Deprecated` 扫描源码中调用了 `@deprecated` 符号的位置（`tsc --noEmit` 不会输出、但 IDE 会划删除线的项），脚本为 `scripts/check-deprecated.cjs`
 
 ## 测试数据管理
 

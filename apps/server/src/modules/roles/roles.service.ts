@@ -123,7 +123,6 @@ export class RolesService {
       throw new ConflictException(`该角色仍被 ${count} 个用户使用，无法删除`)
     }
 
-    // 软删除: 设置 deletedAt 时间戳
     await db.update(roles).set({ deletedAt: new Date() }).where(eq(roles.id, id))
 
     return { message: `角色 ID ${id} 已删除` }

@@ -41,7 +41,6 @@ class WsClient {
       this.stopHeartbeat()
     })
 
-    // pong 回应后清除超时计时器
     this.socket.on('pong', () => {
       if (this.pongTimer) {
         clearTimeout(this.pongTimer)

@@ -28,9 +28,6 @@ export class NotificationsService {
     })
   }
 
-  /**
-   * 统计未读数
-   */
   async unreadCount(userId: number): Promise<number> {
     const [result] = await db
       .select({ count: sql<number>`count(*)::int` })
@@ -63,15 +60,11 @@ export class NotificationsService {
       throw new Error('通知创建失败')
     }
 
-    // 在线则即时推送
     this.eventsService.pushToUser(input.userId, 'notification', created)
 
     return created
   }
 
-  /**
-   * 标记单条已读
-   */
   async markAsRead(userId: number, id: number) {
     const [updated] = await db
       .update(notifications)
@@ -91,9 +84,6 @@ export class NotificationsService {
     return updated
   }
 
-  /**
-   * 标记全部已读
-   */
   async markAllRead(userId: number): Promise<{ updated: number }> {
     const result = await db
       .update(notifications)
@@ -109,9 +99,7 @@ export class NotificationsService {
     return { updated: result.length }
   }
 
-  /**
-   * 删除单条通知（软删除）
-   */
+  // 软删除
   async remove(userId: number, id: number) {
     const [deleted] = await db
       .update(notifications)

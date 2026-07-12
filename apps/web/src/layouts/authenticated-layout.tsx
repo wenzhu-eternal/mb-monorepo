@@ -54,12 +54,10 @@ function AuthenticatedLayoutInner({ children }: { children: ReactNode }) {
     return null
   }
 
-  // 权限判断函数
   const hasPermission = (permission: string) => {
     return user?.permissions?.includes(permission) ?? false
   }
 
-  // 构建内容管理子菜单
   const contentChildren = [
     hasPermission(Permissions.USER_VIEW) && {
       key: '/users',
@@ -73,7 +71,6 @@ function AuthenticatedLayoutInner({ children }: { children: ReactNode }) {
     },
   ].filter(Boolean) as MenuProps['items']
 
-  // 构建系统配置子菜单
   const systemChildren = [
     hasPermission(Permissions.ROLE_VIEW) && {
       key: '/roles',
@@ -87,7 +84,6 @@ function AuthenticatedLayoutInner({ children }: { children: ReactNode }) {
     },
   ].filter(Boolean) as MenuProps['items']
 
-  // 构建日志审计子菜单
   const logChildren = [
     hasPermission(Permissions.AUDIT_VIEW) && {
       key: '/audit-logs',
@@ -104,10 +100,12 @@ function AuthenticatedLayoutInner({ children }: { children: ReactNode }) {
   const menuItems: MenuProps['items'] = [
     { key: '/dashboard', icon: <DashboardOutlined />, label: '仪表盘' },
     { key: '/websocket', icon: <ThunderboltOutlined />, label: 'WebSocket 演示' },
-    // 邮件发送仅对 admin 角色开放
-    ...(user?.roles?.some((r) => r.name === 'admin')
-      ? [{ key: '/mail', icon: <MailOutlined />, label: '邮件发送' }]
-      : []),
+    // 邮件发送需要 mail:send 权限
+    hasPermission(Permissions.MAIL_SEND) && {
+      key: '/mail',
+      icon: <MailOutlined />,
+      label: '邮件发送',
+    },
     contentChildren &&
       contentChildren.length > 0 && {
         key: 'content',
@@ -167,15 +165,12 @@ function AuthenticatedLayoutInner({ children }: { children: ReactNode }) {
 
   const getOpenKeys = () => {
     const pathname = location.pathname
-    // 内容管理分组
     if (pathname === '/users' || pathname === '/files') {
       return ['content']
     }
-    // 系统配置分组
     if (pathname === '/roles' || pathname === '/permissions') {
       return ['system']
     }
-    // 日志审计分组
     if (pathname.startsWith('/audit-logs') || pathname.startsWith('/error-logs')) {
       return ['log']
     }

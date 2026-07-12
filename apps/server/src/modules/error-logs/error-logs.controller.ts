@@ -40,7 +40,7 @@ export class ErrorLogsController {
     return this.errorLogsService.report(dto)
   }
 
-  // ===== 只读接口：@SkipThrottle 避免高频查询被 429 =====
+  // @SkipThrottle 避免高频 429
 
   @Get()
   @SkipThrottle()
@@ -106,7 +106,7 @@ export class ErrorLogsController {
     return this.errorLogsService.findWhitelist()
   }
 
-  // ===== 单条查询：放大限流（可能高频查详情）=====
+  // 放大限流（高频查详情）
 
   @Get(':id')
   @Throttle({ default: { limit: 60, ttl: 60000 } })

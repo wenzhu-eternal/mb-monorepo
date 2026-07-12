@@ -35,7 +35,6 @@ export class PermissionsGuard implements CanActivate {
       [context.getHandler(), context.getClass()],
     )
 
-    // 未标记 @Permissions 则放行
     if (!requiredPermissions || requiredPermissions.length === 0) {
       return true
     }
@@ -51,7 +50,6 @@ export class PermissionsGuard implements CanActivate {
       return true
     }
 
-    // 查询用户
     const userRecord = await db.query.users.findFirst({
       where: and(eq(users.id, userPayload.sub), notDeleted(users.deletedAt)),
     })
@@ -86,14 +84,12 @@ export class PermissionsGuard implements CanActivate {
 
     const allowedRoutes = permissionRecords.flatMap((p) => p.routes ?? [])
 
-    // 检查当前请求是否在允许的路由中
     const currentMethod = request.method
-    const currentPath = request.path
+    // 剥离全局前缀（/api/v1），与 seed/permissions 表中 routes 字段保持一致
+    const currentPath = request.path.replace(/^\/api\/v1/, '')
     const currentRoute = `${currentMethod} ${currentPath}`
 
-    // 检查是否匹配（支持通配符）
     const isAllowed = allowedRoutes.some((route) => {
-      // 精确匹配
       if (route === currentRoute) return true
       // 通配符匹配 (如 GET /api/users/*)
       if (route.endsWith('*')) {

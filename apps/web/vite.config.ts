@@ -2,7 +2,8 @@ import { resolve } from 'node:path'
 import tailwindcss from '@tailwindcss/vite'
 import { TanStackRouterVite } from '@tanstack/router-plugin/vite'
 import react from '@vitejs/plugin-react-swc'
-import { defineConfig } from 'vite'
+// 从 vitest/config 导入，使其同时识别 test 字段（vite 的 defineConfig 不含 test）
+import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
   plugins: [TanStackRouterVite({ quoteStyle: 'single' }), react(), tailwindcss()],

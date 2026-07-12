@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto'
+import { randomInt, randomUUID } from 'node:crypto'
 import { ConflictException, Injectable, Logger, UnauthorizedException } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { JwtService } from '@nestjs/jwt'
@@ -9,6 +9,7 @@ import { db } from '@/db'
 import { isUniqueViolation, notDeleted } from '@/db/helpers'
 import type { User } from '@/db/schema'
 import { permissions, rolePermissions, roles, users } from '@/db/schema'
+import { MailService } from '@/modules/mail/mail.service'
 import { RedisService } from '@/modules/redis/redis.service'
 
 export interface TokenPayload {
@@ -22,7 +23,6 @@ export interface TokenPair {
   refreshToken: string
 }
 
-// refreshToken TTL: 7 天（秒）
 const REFRESH_TOKEN_TTL = 7 * 24 * 60 * 60
 
 @Injectable()
@@ -33,6 +33,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly redisService: RedisService,
+    private readonly mailService: MailService,
   ) {}
 
   async login(
@@ -52,7 +53,6 @@ export class AuthService {
       throw new UnauthorizedException(ErrorMessages[ErrorCodes.INVALID_PASSWORD])
     }
 
-    // 禁用用户禁止登录
     if (user.status === false) {
       throw new UnauthorizedException(ErrorMessages[ErrorCodes.USER_DISABLED])
     }
@@ -119,10 +119,7 @@ export class AuthService {
     return tokens
   }
 
-  /**
-   * 登出: 删除该用户的 refreshToken，实现真正吊销
-   * 由于 cookie 中拿不到 jti，这里删除该用户全部 refresh token
-   */
+  // cookie 拿不到 jti，删除该用户全部 refresh token
   async logout(userId: number): Promise<{ message: string }> {
     await this.redisService.deleteByPattern(`refresh:${userId}:*`)
     return { message: '退出登录成功' }
@@ -170,6 +167,14 @@ export class AuthService {
       throw new ConflictException(ErrorMessages[ErrorCodes.USER_ALREADY_EXISTS])
     }
 
+    const userRole = await db.query.roles.findFirst({
+      where: and(eq(roles.name, 'user'), notDeleted(roles.deletedAt)),
+    })
+
+    if (!userRole) {
+      throw new ConflictException('系统未初始化 user 角色，请联系管理员运行 pnpm db:seed')
+    }
+
     const hashedPassword = await argon2.hash(password)
 
     try {
@@ -180,6 +185,7 @@ export class AuthService {
           email,
           password: hashedPassword,
           nickname,
+          roleId: userRole.id,
         })
         .returning()
 
@@ -195,6 +201,56 @@ export class AuthService {
       }
       throw error
     }
+  }
+
+  /**
+   * 发送注册验证码
+   * 同一邮箱 60 秒内不能重复发送
+   */
+  async sendRegisterCode(email: string): Promise<{ message: string }> {
+    const existingEmail = await db.query.users.findFirst({
+      where: and(eq(users.email, email), notDeleted(users.deletedAt)),
+    })
+
+    if (existingEmail) {
+      throw new ConflictException('该邮箱已被注册')
+    }
+
+    const lastSendTime = await this.redisService.get(`register:code:limit:${email}`)
+    if (lastSendTime) {
+      throw new ConflictException('验证码发送过于频繁，请 60 秒后重试')
+    }
+
+    const code = randomInt(0, 999999).toString().padStart(6, '0')
+    const expiresIn = 5 * 60
+
+    await this.redisService.set(`register:code:${email}`, code, expiresIn)
+    await this.redisService.set(`register:code:limit:${email}`, '1', 60)
+
+    // 发送邮件（传入 auth 生成的 code，确保与 Redis 存储一致）
+    await this.mailService.sendVerificationCode(email, '注册用户', code)
+
+    this.logger.log(`注册验证码已发送: ${email}`)
+    return { message: '验证码已发送' }
+  }
+
+  async registerWithCode(
+    username: string,
+    email: string,
+    password: string,
+    code: string,
+  ): Promise<TokenPair & { user: Omit<User, 'password'> }> {
+    const storedCode = await this.redisService.get(`register:code:${email}`)
+    if (!storedCode || storedCode !== code) {
+      throw new UnauthorizedException('验证码无效或已过期')
+    }
+
+    await this.register(username, email, password)
+
+    // 注册成功后才删除验证码，避免注册失败导致验证码白费
+    await this.redisService.del(`register:code:${email}`)
+
+    return this.login(username, password)
   }
 
   /**
@@ -243,10 +299,6 @@ export class AuthService {
     }
   }
 
-  /**
-   * 根据用户 ID 查询权限码列表
-   * 通过 users.roleId → role_permissions.permission 获取
-   */
   private async getPermissionsByUserId(userId: number): Promise<string[]> {
     const userRecord = await db.query.users.findFirst({
       where: and(eq(users.id, userId), notDeleted(users.deletedAt)),
@@ -265,9 +317,6 @@ export class AuthService {
     return perms.map((p) => p.permission)
   }
 
-  /**
-   * 根据用户 ID 查询角色信息
-   */
   private async getRoleByUserId(
     userId: number,
   ): Promise<{ id: number; name: string; description?: string } | null> {

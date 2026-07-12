@@ -58,9 +58,6 @@ export class MailService {
     this.logger.log(`已加载 ${this.templates.size} 个邮件模板`)
   }
 
-  /**
-   * 发送欢迎邮件（HTML 模板）
-   */
   async sendWelcome(to: string, username: string): Promise<void> {
     const template = this.templates.get('welcome')
     if (template) {
@@ -75,22 +72,23 @@ export class MailService {
   }
 
   /**
-   * 发送验证码邮件（HTML 模板），验证码由后端随机生成
+   * 发送验证码邮件（HTML 模板）
+   * @param code 外部传入验证码（如注册流程由 auth.service 生成并存 Redis）。不传则内部随机生成（如邮件测试接口）
    */
-  async sendVerificationCode(to: string, name?: string): Promise<void> {
-    const code = randomInt(0, 999999).toString().padStart(6, '0')
+  async sendVerificationCode(to: string, name?: string, code?: string): Promise<void> {
+    const finalCode = code ?? randomInt(0, 999999).toString().padStart(6, '0')
     const template = this.templates.get('verification')
     if (template) {
       await this.sendHtml(
         to,
         '【MonoForge】验证码',
-        template({ name: name ?? '用户', code, expireMinutes: 5 }),
+        template({ name: name ?? '用户', code: finalCode, expireMinutes: 5 }),
       )
     } else {
       await this.send(
         to,
         '【MonoForge】验证码',
-        `你的验证码是: ${code}\n\n验证码 5 分钟内有效，请勿泄露给他人。`,
+        `你的验证码是: ${finalCode}\n\n验证码 5 分钟内有效，请勿泄露给他人。`,
       )
     }
   }
@@ -113,7 +111,6 @@ export class MailService {
         })
       : undefined
 
-    // 构建附件列表：仅成功且文件存在时附带
     const attachments: Attachment[] = []
     if (success && filepath && existsSync(filepath)) {
       attachments.push({
@@ -171,9 +168,6 @@ export class MailService {
     }
   }
 
-  /**
-   * 发送 HTML 邮件
-   */
   private async sendHtml(to: string, subject: string, html: string): Promise<void> {
     if (!this.transporter) {
       this.logger.warn(`邮件服务未配置，跳过发送: ${subject} -> ${to}`)

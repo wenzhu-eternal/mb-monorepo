@@ -27,10 +27,13 @@ import {
 } from '@/hooks/use-permissions'
 import { AuthenticatedLayout } from '@/layouts/authenticated-layout'
 import { extractErrorMessage } from '@/lib/error'
+import { Permissions } from '@/lib/permissions'
+import { requirePermission } from '@/lib/route-guards'
 
 const { Title } = Typography
 
 export const Route = createFileRoute('/permissions')({
+  beforeLoad: requirePermission(Permissions.PERMISSION_VIEW),
   component: PermissionsPage,
 })
 

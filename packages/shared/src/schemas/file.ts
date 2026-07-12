@@ -1,6 +1,5 @@
 import { z } from 'zod'
 
-// 文件记录
 export const FileSchema = z.object({
   id: z.number().int().positive(),
   filename: z.string(),

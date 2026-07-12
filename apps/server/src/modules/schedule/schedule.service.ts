@@ -66,13 +66,25 @@ export class ScheduleService {
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : String(err)
       this.logger.error(`数据库备份失败: ${errorMsg}`)
-      // 入库记录异常
-      await this.errorLogsService.record({
-        message: `数据库备份失败: ${errorMsg}`,
-        stack: err instanceof Error ? err.stack : undefined,
-        context: { task: 'dailyBackup' },
-      })
-      await this.mailService.sendBackupNotification(false, errorMsg)
+      // 入库记录异常（兜底 try-catch，避免异常记录本身失败时变成未处理 rejection）
+      try {
+        await this.errorLogsService.record({
+          message: `数据库备份失败: ${errorMsg}`,
+          stack: err instanceof Error ? err.stack : undefined,
+          context: { task: 'dailyBackup' },
+        })
+      } catch (recordErr) {
+        this.logger.error(
+          `备份异常入库失败: ${recordErr instanceof Error ? recordErr.message : String(recordErr)}`,
+        )
+      }
+      try {
+        await this.mailService.sendBackupNotification(false, errorMsg)
+      } catch (mailErr) {
+        this.logger.error(
+          `备份失败通知邮件发送失败: ${mailErr instanceof Error ? mailErr.message : String(mailErr)}`,
+        )
+      }
     }
   }
 
@@ -88,7 +100,6 @@ export class ScheduleService {
         return
       }
 
-      // 按文件名（含日期）排序，旧的在前
       backups.sort()
       const toDelete = backups.slice(0, backups.length - MAX_BACKUPS)
 
