@@ -1,0 +1,113 @@
+import { makePngFile } from '@e2e/fixtures/files'
+import { adminUser } from '@e2e/fixtures/users'
+import { apiClient } from '@e2e/helpers/api'
+import { loginAsAdmin } from '@e2e/helpers/auth'
+import { expect, test } from '@playwright/test'
+
+/**
+ * 文件上传 + 软删 e2e
+ *
+ * 覆盖：
+ *   - admin 上传 PNG → 列表显示
+ *   - admin 删除自己上传的文件 → 成功 + 列表移除
+ *   - 上传者删除自己的文件（通过 API 验证 200）
+ *   - 普通用户删除他人文件 → 403
+ *   - admin 删除他人上传的文件 → 200
+ *   - 上传非法文件 → 失败提示
+ */
+
+test.describe('文件上传 + 软删', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginAsAdmin(page)
+    // apiClient 也用 admin 登录
+    await apiClient.login(adminUser.username, adminUser.password)
+  })
+
+  test('admin 上传 PNG → 列表显示', async ({ page }) => {
+    await page.goto('/files')
+    await expect(page.getByRole('heading', { name: '文件管理' })).toBeVisible()
+
+    const filePath = makePngFile(`e2e-upload-${Date.now()}.png`)
+
+    // antd Upload 通过 file input 接收文件
+    const fileInput = page.locator('input[type="file"]')
+    await fileInput.setInputFiles(filePath)
+
+    // 上传成功提示
+    await expect(page.locator('.ant-message-success')).toBeVisible({ timeout: 10_000 })
+
+    // 列表应显示上传的文件名
+    await expect(page.locator('.ant-table-row').first()).toBeVisible({ timeout: 10_000 })
+  })
+
+  test('admin 删除自己上传的文件 → 成功 + 列表移除', async ({ page }) => {
+    const filePath = makePngFile(`e2e-delete-${Date.now()}.png`)
+    const { data: uploaded } = await apiClient.uploadFile(
+      '/files/upload',
+      filePath,
+      `e2e-delete-${Date.now()}.png`,
+      'image/png',
+    )
+    const fileId = (uploaded as { id?: number })?.id
+    expect(fileId).toBeTruthy()
+
+    await page.goto('/files')
+    await expect(page.locator('.ant-table-row').first()).toBeVisible({ timeout: 10_000 })
+
+    const firstRow = page.locator('.ant-table-row').first()
+    await firstRow.getByRole('button', { name: '删除' }).click()
+    // antd Popconfirm 的确认按钮（okText 未指定，用 CSS class 定位避免文案差异）
+    await page.locator('.ant-popconfirm .ant-btn-primary').click()
+
+    await expect(page.locator('.ant-message-success')).toBeVisible({ timeout: 5000 })
+  })
+
+  test('上传者通过 API 删除自己的文件 → 200', async () => {
+    const filePath = makePngFile(`e2e-api-delete-${Date.now()}.png`)
+    const { data: uploaded } = await apiClient.uploadFile(
+      '/files/upload',
+      filePath,
+      `e2e-api-delete-${Date.now()}.png`,
+      'image/png',
+    )
+    const fileId = (uploaded as { id?: number })?.id
+    expect(fileId).toBeTruthy()
+
+    const { status } = await apiClient.delete(`/files/${fileId}`)
+    expect([200, 204].includes(status)).toBe(true)
+
+    // 二次删除应 404（已软删）
+    const { status: secondStatus } = await apiClient.delete(`/files/${fileId}`)
+    expect(secondStatus).toBe(404)
+  })
+
+  test('admin 通过 API 删除他人上传的文件 → 200', async () => {
+    const filePath = makePngFile(`e2e-admin-delete-${Date.now()}.png`)
+    const { data: uploaded } = await apiClient.uploadFile(
+      '/files/upload',
+      filePath,
+      `e2e-admin-delete-${Date.now()}.png`,
+      'image/png',
+    )
+    const fileId = (uploaded as { id?: number })?.id
+    expect(fileId).toBeTruthy()
+
+    const { status } = await apiClient.delete(`/files/${fileId}`)
+    expect([200, 204].includes(status)).toBe(true)
+  })
+
+  test('上传非法文件内容（伪装 png）→ 失败提示', async ({ page }) => {
+    await page.goto('/files')
+    await expect(page.getByRole('heading', { name: '文件管理' })).toBeVisible()
+
+    // 创建一个内容是文本但扩展名是 .png 的文件
+    const { makeFakeFile } = await import('@e2e/fixtures/files')
+    const fakePath = makeFakeFile(`e2e-fake-${Date.now()}.png`)
+
+    const fileInput = page.locator('input[type="file"]')
+    await fileInput.setInputFiles(fakePath)
+
+    // 应该看到错误提示（文件内容校验失败）
+    await expect(page.locator('.ant-message-error')).toBeVisible({ timeout: 10_000 })
+  })
+})

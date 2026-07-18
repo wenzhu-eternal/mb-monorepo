@@ -1,7 +1,10 @@
 import { resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vitest/config'
 
-// E2E 测试配置（HTTP supertest，不连真实 DB）
+// E2E 测试配置（HTTP supertest，连真实 DB）
+const __dirname = fileURLToPath(new URL('.', import.meta.url))
+
 export default defineConfig({
   test: {
     globals: true,
@@ -12,8 +15,8 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@': resolve(__dirname, './src'),
-      '@shared': resolve(__dirname, '../../packages/shared/src'),
+      '@': resolve(__dirname, '../src'),
+      '@shared': resolve(__dirname, '../../../packages/shared/src'),
     },
   },
 })

@@ -18,7 +18,10 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express'
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger'
 import { PermissionCodes } from '@shared/constants/permissions'
+import { FileItemSchema, UploadResultSchema } from '@shared/schemas/file'
+import { PaginatedResponseSchema } from '@shared/schemas/pagination'
 import type { Response } from 'express'
+import { ZodSerializerDto } from 'nestjs-zod'
 import { CurrentUser } from '@/common/decorators/current-user.decorator'
 import { Permissions } from '@/common/decorators/permissions.decorator'
 import { PermissionsGuard } from '@/common/guards/permissions.guard'
@@ -41,6 +44,7 @@ export class FilesController {
       defParamCharset: 'utf-8',
     }),
   )
+  @ZodSerializerDto(UploadResultSchema)
   async upload(
     @UploadedFile() file: Express.Multer.File,
     @CurrentUser() user: { sub: number; username: string },
@@ -53,6 +57,7 @@ export class FilesController {
   @ApiOperation({ summary: '分页查询文件列表' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'pageSize', required: false, type: Number })
+  @ZodSerializerDto(PaginatedResponseSchema(FileItemSchema))
   async findAll(@Query('page') page?: string, @Query('pageSize') pageSize?: string) {
     const pageNum = page ? Number.parseInt(page, 10) : 1
     const size = pageSize ? Number.parseInt(pageSize, 10) : 10

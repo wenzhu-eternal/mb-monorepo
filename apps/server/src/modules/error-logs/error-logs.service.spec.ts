@@ -84,7 +84,6 @@ describe('ErrorLogsService', () => {
 
     it('白名单未命中时入库', async () => {
       redisServiceMock.get.mockResolvedValue(null)
-      // 返回空数组
       vi.mocked(mockDb.select).mockReturnValue({
         from: vi.fn().mockReturnValue({
           where: vi.fn().mockResolvedValue([]),

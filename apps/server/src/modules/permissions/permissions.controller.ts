@@ -15,6 +15,10 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger'
 import { Throttle } from '@nestjs/throttler'
 import { PermissionCodes } from '@shared/constants/permissions'
+import { PaginatedResponseSchema } from '@shared/schemas/pagination'
+import { PermissionSchema } from '@shared/schemas/permission'
+import { ZodSerializerDto } from 'nestjs-zod'
+import { z } from 'zod'
 import { Permissions } from '@/common/decorators/permissions.decorator'
 import { PermissionsGuard } from '@/common/guards/permissions.guard'
 import { CreatePermissionDto, UpdatePermissionDto } from './dto/permission.dto'
@@ -32,6 +36,7 @@ export class PermissionsController {
   @ApiOperation({ summary: '分页查询权限' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'pageSize', required: false, type: Number })
+  @ZodSerializerDto(PaginatedResponseSchema(PermissionSchema))
   async findAll(@Query('page') page?: string, @Query('pageSize') pageSize?: string) {
     const pageNum = page ? Number.parseInt(page, 10) : 1
     const size = pageSize ? Number.parseInt(pageSize, 10) : 10
@@ -41,6 +46,7 @@ export class PermissionsController {
   @Get('list')
   @Permissions(PermissionCodes.PERMISSION_VIEW)
   @ApiOperation({ summary: '查询所有权限（不分页）' })
+  @ZodSerializerDto(z.array(PermissionSchema))
   async findAllList() {
     return this.permissionsService.findAllList()
   }
@@ -49,6 +55,7 @@ export class PermissionsController {
   @Throttle({ default: { limit: 60, ttl: 60000 } })
   @Permissions(PermissionCodes.PERMISSION_VIEW)
   @ApiOperation({ summary: '按ID查询权限' })
+  @ZodSerializerDto(PermissionSchema)
   async findOne(@Param('id', ParseIntPipe) id: number) {
     return this.permissionsService.findById(id)
   }
@@ -57,6 +64,7 @@ export class PermissionsController {
   @HttpCode(HttpStatus.CREATED)
   @Permissions(PermissionCodes.PERMISSION_CREATE)
   @ApiOperation({ summary: '创建权限' })
+  @ZodSerializerDto(PermissionSchema)
   async create(@Body() dto: CreatePermissionDto) {
     return this.permissionsService.create(dto)
   }
@@ -64,6 +72,7 @@ export class PermissionsController {
   @Patch(':id')
   @Permissions(PermissionCodes.PERMISSION_UPDATE)
   @ApiOperation({ summary: '更新权限' })
+  @ZodSerializerDto(PermissionSchema)
   async update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdatePermissionDto) {
     return this.permissionsService.update(id, dto)
   }

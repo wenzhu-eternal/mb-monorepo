@@ -14,6 +14,9 @@ const envSchema = z
     API_PORT: z.coerce.number().default(9000),
     API_PREFIX: z.string().default('/api/v1'),
 
+    // 应用名（Swagger 标题、邮件主题、邮件模板均引用，新项目通过 .env 配置）
+    APP_NAME: z.string().default('MonoForge'),
+
     ALLOW_ORIGIN: z.string().default('http://localhost:3000'),
 
     // Cookie: 字符串 "true"/"false" 正确转 boolean（z.coerce.boolean() 对非空字符串恒为 true，有 bug）

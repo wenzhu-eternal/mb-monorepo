@@ -16,6 +16,15 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger'
 import { SkipThrottle, Throttle } from '@nestjs/throttler'
 import { PermissionCodes } from '@shared/constants/permissions'
+import {
+  ErrorLogGroupSchema,
+  ErrorLogSchema,
+  ErrorStatsSchema,
+  ErrorWhitelistSchema,
+} from '@shared/schemas/error-log'
+import { PaginatedResponseSchema } from '@shared/schemas/pagination'
+import { ZodSerializerDto } from 'nestjs-zod'
+import { z } from 'zod'
 import { CurrentUser } from '@/common/decorators/current-user.decorator'
 import { Permissions } from '@/common/decorators/permissions.decorator'
 import { Public } from '@/common/decorators/public.decorator'
@@ -31,8 +40,6 @@ import { ErrorLogsService } from './error-logs.service'
 export class ErrorLogsController {
   constructor(private readonly errorLogsService: ErrorLogsService) {}
 
-  // ===== 前端错误上报（公开，不需要权限）=====
-
   @Post('report')
   @Public()
   @HttpCode(HttpStatus.CREATED)
@@ -40,8 +47,6 @@ export class ErrorLogsController {
   async reportError(@Body() dto: ReportErrorDto) {
     return this.errorLogsService.report(dto)
   }
-
-  // @SkipThrottle 避免高频 429
 
   @Get()
   @SkipThrottle()
@@ -54,6 +59,7 @@ export class ErrorLogsController {
   @ApiQuery({ name: 'keyword', required: false, type: String })
   @ApiQuery({ name: 'source', required: false, type: String })
   @ApiQuery({ name: 'isResolved', required: false, type: String })
+  @ZodSerializerDto(PaginatedResponseSchema(ErrorLogSchema))
   async findAll(
     @Query('page') page?: string,
     @Query('pageSize') pageSize?: string,
@@ -78,6 +84,7 @@ export class ErrorLogsController {
   @ApiBearerAuth()
   @Permissions(PermissionCodes.ERROR_LOG_VIEW)
   @ApiOperation({ summary: '错误统计' })
+  @ZodSerializerDto(ErrorStatsSchema)
   async getStats() {
     return this.errorLogsService.getStats()
   }
@@ -89,6 +96,7 @@ export class ErrorLogsController {
   @Permissions(PermissionCodes.ERROR_LOG_VIEW)
   @ApiOperation({ summary: '相同报错聚合 Top N' })
   @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ZodSerializerDto(z.array(ErrorLogGroupSchema))
   async findGrouped(@Query('limit') limit?: string) {
     const n = limit ? Number.parseInt(limit, 10) : 10
     if (Number.isNaN(n) || n < 1) {
@@ -103,6 +111,7 @@ export class ErrorLogsController {
   @ApiBearerAuth()
   @Permissions(PermissionCodes.ERROR_LOG_VIEW)
   @ApiOperation({ summary: '查询全部白名单' })
+  @ZodSerializerDto(z.array(ErrorWhitelistSchema))
   async findWhitelist() {
     return this.errorLogsService.findWhitelist()
   }
@@ -115,11 +124,10 @@ export class ErrorLogsController {
   @ApiBearerAuth()
   @Permissions(PermissionCodes.ERROR_LOG_VIEW)
   @ApiOperation({ summary: '按ID查询错误日志' })
+  @ZodSerializerDto(ErrorLogSchema)
   async findOne(@Param('id', ParseIntPipe) id: number) {
     return this.errorLogsService.findById(id)
   }
-
-  // ===== 写操作：error_log:manage 权限 =====
 
   @Post(':id/resolve')
   @UseGuards(PermissionsGuard)
@@ -151,14 +159,13 @@ export class ErrorLogsController {
     return this.errorLogsService.remove(id)
   }
 
-  // ===== 白名单 CRUD =====
-
   @Post('whitelist')
   @UseGuards(PermissionsGuard)
   @ApiBearerAuth()
   @Permissions(PermissionCodes.ERROR_LOG_MANAGE)
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: '创建白名单规则' })
+  @ZodSerializerDto(ErrorWhitelistSchema)
   async createWhitelist(@Body() dto: CreateWhitelistDto) {
     return this.errorLogsService.createWhitelist(dto)
   }
@@ -168,6 +175,7 @@ export class ErrorLogsController {
   @ApiBearerAuth()
   @Permissions(PermissionCodes.ERROR_LOG_MANAGE)
   @ApiOperation({ summary: '更新白名单规则' })
+  @ZodSerializerDto(ErrorWhitelistSchema)
   async updateWhitelist(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateWhitelistDto) {
     return this.errorLogsService.updateWhitelist(id, dto)
   }

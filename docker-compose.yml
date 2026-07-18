@@ -38,6 +38,30 @@ services:
       timeout: 5s
       retries: 5
 
+  # ============================================================
+  # e2e 专用 postgres：端口 15432，独立数据卷，与 DEV(5434) 完全隔离
+  # 所有项目共用此容器，通过 database name 区分（monoforge_e2e_db / travel_car_e2e_db / ...）
+  # 启动：docker compose up -d e2e-postgres
+  # 重置：docker compose down -v e2e-postgres（删数据卷）
+  # ============================================================
+  e2e-postgres:
+    image: postgres:16-alpine
+    container_name: e2e-postgres
+    restart: unless-stopped
+    ports:
+      - '15432:5432'
+    environment:
+      POSTGRES_USER: ${E2E_POSTGRES_USER:-e2e_user}
+      POSTGRES_PASSWORD: ${E2E_POSTGRES_PASSWORD:-e2e_password}
+      POSTGRES_DB: ${E2E_POSTGRES_DB:-monoforge_e2e_db}
+    volumes:
+      - e2e_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${E2E_POSTGRES_USER:-e2e_user} -d ${E2E_POSTGRES_DB:-monoforge_e2e_db}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   # 单容器：前后端同端口 9000，ngrok 直接代理此端口即可
   app:
     build:
@@ -86,3 +110,4 @@ volumes:
   postgres_data:
   redis_data:
   uploads_data:
+  e2e_postgres_data:

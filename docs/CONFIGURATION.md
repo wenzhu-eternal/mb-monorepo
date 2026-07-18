@@ -11,24 +11,32 @@
 
 | 变量 | 说明 | 默认/示例 |
 |---|---|---|
-| `DATABASE_URL` | PostgreSQL 连接串 | `postgresql://monoforge_user:monoforge_password@localhost:5434/monoforge_database` |
+| `DATABASE_URL` | PostgreSQL 连接串（DEV） | `postgresql://monoforge_user:monoforge_password@localhost:5434/monoforge_database` |
+| `E2E_DATABASE_URL` | e2e 专用 PostgreSQL 连接串（独立容器，DEV DB 零污染） | `postgresql://e2e_user:e2e_password@localhost:15432/monoforge_e2e_db` |
 | `REDIS_URL` | Redis 连接串 | `redis://localhost:6381` |
 | `JWT_SECRET` | JWT access token 密钥 | 必填，长度 >= 32 |
 | `JWT_REFRESH_SECRET` | JWT refresh token 密钥 | 必填，长度 >= 32 |
 | `API_PORT` | 后端端口 | `9000` |
 | `API_PREFIX` | API 前缀 | `/api/v1` |
+| `APP_NAME` | 应用名（Swagger 标题、邮件主题、邮件模板均引用，新项目通过 .env 配置） | `MonoForge` |
 | `ALLOW_ORIGIN` | CORS 白名单 | `http://localhost:3000` |
 | `NODE_ENV` | 环境 | `development` / `production` |
+| `COOKIE_SECURE` | refresh token cookie 的 secure 标志（HTTP=false，HTTPS=true） | `false` |
+| `THROTTLE_TTL` | 限流时间窗口（秒） | `60` |
+| `THROTTLE_LIMIT` | 时间窗口内最大请求数（生产 10；e2e 由 `playwright.config.ts` 的 webServer.env 覆盖为 1000） | `10` |
+| `SEED_ADMIN_EMAIL` | seed 创建 admin 的邮箱（可选，默认 `admin@example.com`） | `admin@example.com` |
+| `SEED_ADMIN_PASSWORD` | seed 创建 admin 的密码（可选，默认 `888888`，首次登录后请立即修改） | `888888` |
+| `SEED_ADMIN_NICKNAME` | seed 创建 admin 的昵称（可选，默认 `Administrator`） | `Administrator` |
 
 ### 邮件服务变量
 
 | 变量 | 说明 | 示例 |
 |---|---|---|
-| `MAIL_HOST` | SMTP 主机 | `smtp.163.com` |
+| `MAIL_HOST` | SMTP 主机 | `smtp.example.com` |
 | `MAIL_PORT` | SMTP 端口 | `465` |
-| `MAIL_USER` | SMTP 用户名 | `travel_car@163.com` |
-| `MAIL_PASSWORD` | SMTP 授权码（非登录密码） | `SKECLRLSATENJTZH` |
-| `MAIL_FROM` | 发件人地址 | `travel_car@163.com` |
+| `MAIL_USER` | SMTP 用户名 | `your-email@example.com` |
+| `MAIL_PASSWORD` | SMTP 授权码（非登录密码） | `your-smtp-auth-code` |
+| `MAIL_FROM` | 发件人地址 | `your-email@example.com` |
 
 > 注意：本项目用 `MAIL_PASSWORD`（不是 `MAIL_PASS`）。跨项目拷贝 `.env` 时注意对齐变量名。
 
@@ -55,7 +63,10 @@ const port = portRaw ? Number(portRaw) : 587
 
 **缓解措施**：
 - `turbo.json` 的 `build`/`lint`/`test` 均配置 `dependsOn: ["^build"]`，确保 `shared` 先于 `web`/`server` 构建到 dist
+- 根 `package.json` 的 `prepare` 脚本为 `husky && pnpm --filter=@monoforge/shared build`，`pnpm install` 后自动构建 shared 出 dist，根治 fresh clone 后直接 `tsc` / IDE 跳转找不到 dist 的问题
 - 开发时改 shared schema 后需手动执行 `pnpm --filter=shared build` 刷新 dist，否则 `tsc` 类型检查会用旧产物（vite 打包不受影响，因 alias 指向源码）
+
+> 注：`dist/` 在 `.gitignore` 中被忽略，不入库。`prepare` 脚本 + turbo 任务图双重保证 dist 总是存在：install 时 prepare 兜底 fresh clone，build/lint/test 时 turbo `^build` 兜底依赖变更。
 
 ## 前端环境变量
 
@@ -63,7 +74,7 @@ const port = portRaw ? Number(portRaw) : 587
 |---|---|---|
 | `VITE_API_BASE_URL` | API 基础地址（同源留空，分离部署配完整 URL） | `''` |
 | `VITE_APP_NAME` | 品牌名（侧边栏 Logo、页面标题） | `MonoForge` |
-| `VITE_APP_SHORT_NAME` | 品牌简称（侧边栏折叠态显示） | `M` |
+| `VITE_APP_SHORT_NAME` | 品牌简称（侧边栏折叠态显示） | `MF` |
 
 ### 品牌配置
 

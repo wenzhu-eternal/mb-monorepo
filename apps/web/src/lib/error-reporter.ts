@@ -40,7 +40,6 @@ export function installGlobalErrorHandlers(): void {
     })
   })
 
-  // IMG/SCRIPT/LINK
   window.addEventListener(
     'error',
     (event) => {

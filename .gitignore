@@ -39,12 +39,19 @@ yarn-error.log*
 # Test coverage
 coverage/
 
+# Playwright e2e 产物（不入库）
+apps/e2e/test-results/
+apps/e2e/playwright-report/
+apps/e2e/blob-report/
+apps/e2e/.last-run.json
+
 # Temporary files
 tmp/
 temp/
 
 # uploads - 默认忽略上传文件（如需入库，注释掉此行或改为 !uploads/.gitkeep）
 uploads/
+apps/server/uploads-trash/
 
 # Database backups（本地临时数据，不进版本库）
 apps/server/backups/

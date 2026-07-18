@@ -7,7 +7,7 @@ import * as argon2 from 'argon2'
 import { and, desc, eq, sql } from 'drizzle-orm'
 import { db } from '@/db'
 import { isUniqueViolation, notDeleted } from '@/db/helpers'
-import { files, roles, users } from '@/db/schema'
+import { files, rolePermissions, roles, users } from '@/db/schema'
 import { Cacheable } from '@/modules/cache/cache.decorator'
 import { CacheService } from '@/modules/cache/cache.service'
 
@@ -210,6 +210,22 @@ export class UsersService {
       // 更新后清缓存（按 pattern 删除该用户的所有缓存变体）
       await this.cacheService.delByPattern(`cache:user:*${id}*`)
     }
+  }
+
+  /**
+   * 检查用户是否拥有指定权限码
+   */
+  async hasPermission(userId: number, permissionCode: string): Promise<boolean> {
+    const user = await db.query.users.findFirst({
+      where: and(eq(users.id, userId), notDeleted(users.deletedAt)),
+    })
+    if (!user?.roleId) return false
+    if (user.username === 'admin') return true
+    const result = await db
+      .select({ permission: rolePermissions.permission })
+      .from(rolePermissions)
+      .where(eq(rolePermissions.roleId, user.roleId))
+    return result.some((p) => p.permission === permissionCode)
   }
 
   async remove(id: number): Promise<{ message: string }> {

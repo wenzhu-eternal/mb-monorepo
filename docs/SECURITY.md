@@ -65,6 +65,43 @@
 ### 文件删除权限
 
 - 仅 admin 用户或原始上传者可删除文件
+- **软删时磁盘文件必须移到隔离目录**：`files.service.remove` 在 `set({ deletedAt })` 前调用 `moveToTrash(filePath, filename)`，将文件 `rename` 到 `uploads-trash/{timestamp}-{filename}`。静态托管中间件只服务 `uploads/`，不服务 `uploads-trash/`，避免"已删文件仍可凭 URL 访问"的隐私泄露。`rename` 失败仅告警不阻断软删（DB 记录仍标记删除），保证业务可用性
+
+## 越权防护
+
+### 用户角色/状态变更（防提权）
+
+`PATCH /users/:id` 必须区分"改资料"与"改角色/状态"两类操作，权限分层：
+
+- **改资料**（email/nickname/avatar 等）：持 `USER_UPDATE` 即可
+- **改角色/状态**（roleId/status）：必须额外持 `USER_ROLE_MANAGE` 权限码
+
+controller 检查逻辑：
+
+```ts
+if (updateUserDto.roleId !== undefined || updateUserDto.status !== undefined) {
+  const canManage = await this.usersService.hasPermission(
+    currentUser.sub,
+    PermissionCodes.USER_ROLE_MANAGE,
+  )
+  if (!canManage) {
+    throw new ForbiddenException('修改角色/状态需要更高权限')
+  }
+}
+```
+
+`users.service.hasPermission(userId, permissionCode)` 通过 `rolePermissions` 表查询用户角色是否拥有指定权限码；`admin` 用户（初始管理员）短路返回 `true`。
+
+### WebSocket 模块守卫
+
+`websocket.controller` 必须在类级别挂 `@UseGuards(PermissionsGuard)`，并按接口区分鉴权：
+
+- `GET /websocket/online`（暴露在线用户 ID 列表）：必须挂 `@Permissions(NOTIFICATION_VIEW)`，否则任意登录用户可枚举在线用户 ID（信息泄露）
+- `POST /websocket/notify`（向指定用户发通知）：必须用 `@CurrentUser()` 取当前用户，并校验 `dto.userId === user.sub`——禁止任何登录用户给任意用户发通知并持久化写入
+
+### 前端路由守卫
+
+所有需登录的路由必须在 `beforeLoad` 中调用 `requireAuth()`（仅检查登录态）或 `requirePermission(code)`（检查具体权限码）。`mail`/`dashboard`/`websocket` 等路由不得缺失 `beforeLoad`，否则未登录用户可直接访问页面（虽后端有权限兜底，仍是 UX 问题且放大攻击面）。
 
 ## 权限控制
 

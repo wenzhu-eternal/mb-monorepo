@@ -103,4 +103,3 @@ export type ErrorLogGroup = z.infer<typeof ErrorLogGroupSchema>
 export type ErrorWhitelist = z.infer<typeof ErrorWhitelistSchema>
 export type CreateErrorWhitelist = z.infer<typeof CreateErrorWhitelistSchema>
 export type UpdateErrorWhitelist = z.infer<typeof UpdateErrorWhitelistSchema>
-export type BatchResolveError = z.infer<typeof BatchResolveErrorSchema>

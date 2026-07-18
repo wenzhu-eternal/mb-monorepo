@@ -1,6 +1,9 @@
 import { Body, Controller, Get, Param, ParseIntPipe, Put, UseGuards } from '@nestjs/common'
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
 import { PermissionCodes } from '@shared/constants/permissions'
+import { RolePermissionSchema } from '@shared/schemas/permission'
+import { ZodSerializerDto } from 'nestjs-zod'
+import { z } from 'zod'
 import { Permissions } from '@/common/decorators/permissions.decorator'
 import { PermissionsGuard } from '@/common/guards/permissions.guard'
 import { UpdateRolePermissionsDto } from './dto/update-role-permissions.dto'
@@ -16,6 +19,7 @@ export class RolePermissionsController {
   @Get()
   @Permissions(PermissionCodes.PERMISSION_VIEW)
   @ApiOperation({ summary: '查询所有角色权限关联' })
+  @ZodSerializerDto(z.array(RolePermissionSchema))
   async findAll() {
     return this.rolePermissionsService.findAll()
   }

@@ -278,7 +278,6 @@ export class AuthService {
 
   /**
    * 存储 refreshToken 到 Redis: key=refresh:{userId}:{jti}, value=1, TTL=7d
-   * 公开供第三方登录（如微信）复用。
    */
   async storeRefreshTokenForExternal(token: string, userId: number): Promise<void> {
     try {

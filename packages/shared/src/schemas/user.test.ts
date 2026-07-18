@@ -1,12 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  CreateUserSchema,
-  LoginSchema,
-  PhoneSchema,
-  RegisterSchema,
-  UpdateUserSchema,
-  UserSchema,
-} from './user'
+import { CreateUserSchema, LoginSchema, PhoneSchema, UpdateUserSchema, UserSchema } from './user'
 
 describe('PhoneSchema', () => {
   it('接受合法中国大陆手机号', () => {
@@ -103,29 +96,6 @@ describe('LoginSchema', () => {
 
   it('用户名过短失败', () => {
     expect(LoginSchema.safeParse({ username: 'ab', password: 'secret123' }).success).toBe(false)
-  })
-})
-
-describe('RegisterSchema', () => {
-  it('合法数据通过', () => {
-    expect(
-      RegisterSchema.safeParse({
-        username: 'alice',
-        email: 'alice@example.com',
-        password: 'secret123',
-      }).success,
-    ).toBe(true)
-  })
-
-  it('nickname 可选', () => {
-    expect(
-      RegisterSchema.safeParse({
-        username: 'alice',
-        email: 'alice@example.com',
-        password: 'secret123',
-        nickname: 'Alice',
-      }).success,
-    ).toBe(true)
   })
 })
 

@@ -33,7 +33,6 @@ export class ErrorLogsService {
   constructor(private readonly redisService: RedisService) {}
 
   async report(params: ReportErrorParams): Promise<{ id: number }> {
-    // 白名单过滤
     const isWhitelisted = await this.checkWhitelist(params.message, params.url)
     if (isWhitelisted) {
       return { id: -1 }
@@ -330,9 +329,7 @@ export class ErrorLogsService {
 
     try {
       await this.redisService.set(WHITELIST_CACHE_KEY, JSON.stringify(list), WHITELIST_CACHE_TTL)
-    } catch {
-      // 缓存写入失败忽略
-    }
+    } catch {}
 
     return list as ErrorWhitelist[]
   }

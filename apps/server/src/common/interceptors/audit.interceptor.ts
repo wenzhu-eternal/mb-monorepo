@@ -73,7 +73,7 @@ export class AuditInterceptor implements NestInterceptor {
     const action = ACTION_MAP[rawAction] ?? rawAction
     const resource = RESOURCE_MAP[rawResource] ?? rawResource
 
-    // 修复: AuthGuard 设置的 payload 字段为 sub（非 id）
+    // AuthGuard 在 payload 中用 sub 字段
     const userId = request.user?.sub as number | undefined
     // 反向代理下 request.ip 是代理 IP，取 x-forwarded-for 第一段作为真实客户端 IP
     const forwardedFor = request.headers['x-forwarded-for'] as string | undefined

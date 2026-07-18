@@ -10,6 +10,9 @@ import {
   Query,
 } from '@nestjs/common'
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
+import { NotificationSchema } from '@shared/schemas/notification'
+import { ZodSerializerDto } from 'nestjs-zod'
+import { z } from 'zod'
 import { CurrentUser } from '@/common/decorators/current-user.decorator'
 import { type TokenPayload } from '@/modules/auth/auth.service'
 import { NotificationsService } from './notifications.service'
@@ -22,6 +25,7 @@ export class NotificationsController {
 
   @Get()
   @ApiOperation({ summary: '拉取通知列表' })
+  @ZodSerializerDto(z.array(NotificationSchema))
   list(@CurrentUser() user: TokenPayload, @Query('unreadOnly') unreadOnly?: string) {
     return this.notificationsService.list(user.sub, unreadOnly === 'true')
   }
@@ -35,6 +39,7 @@ export class NotificationsController {
   @Post(':id/read')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '标记单条已读' })
+  @ZodSerializerDto(NotificationSchema)
   markAsRead(@CurrentUser() user: TokenPayload, @Param('id', ParseIntPipe) id: number) {
     return this.notificationsService.markAsRead(user.sub, id)
   }

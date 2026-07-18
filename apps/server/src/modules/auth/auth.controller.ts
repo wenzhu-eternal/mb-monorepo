@@ -11,7 +11,10 @@ import {
 } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
+import { AuthResponseSchema, RefreshTokenResponseSchema } from '@shared/schemas/auth'
+import { UserSchema } from '@shared/schemas/user'
 import type { Request, Response } from 'express'
+import { ZodSerializerDto } from 'nestjs-zod'
 import { CurrentUser } from '@/common/decorators/current-user.decorator'
 import { Public } from '@/common/decorators/public.decorator'
 import { getRefreshTokenCookieOptions } from '@/common/utils/cookie-options'
@@ -32,6 +35,7 @@ export class AuthController {
   @Public()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '用户登录' })
+  @ZodSerializerDto(AuthResponseSchema)
   async login(@Body() loginDto: LoginDto, @Res({ passthrough: true }) response: Response) {
     const result = await this.authService.login(loginDto.username, loginDto.password)
 
@@ -59,6 +63,7 @@ export class AuthController {
   @Public()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '用户注册' })
+  @ZodSerializerDto(AuthResponseSchema)
   async register(@Body() dto: RegisterDto, @Res({ passthrough: true }) response: Response) {
     const result = await this.authService.registerWithCode(
       dto.username,
@@ -83,6 +88,7 @@ export class AuthController {
   @Public()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '刷新访问令牌' })
+  @ZodSerializerDto(RefreshTokenResponseSchema)
   async refresh(
     @Req() request: Request,
     @Body('refreshToken') refreshTokenFromBody: string | undefined,
@@ -118,6 +124,7 @@ export class AuthController {
   @Get('me')
   @ApiBearerAuth()
   @ApiOperation({ summary: '获取当前用户信息' })
+  @ZodSerializerDto(UserSchema)
   async getProfile(@CurrentUser() user: TokenPayload) {
     return this.authService.getProfile(user.sub)
   }

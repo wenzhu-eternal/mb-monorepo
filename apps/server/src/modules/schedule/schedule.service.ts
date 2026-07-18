@@ -1,4 +1,5 @@
-import { exec } from 'node:child_process'
+import { exec, spawn } from 'node:child_process'
+import { createWriteStream } from 'node:fs'
 import { mkdir, readdir, stat, unlink } from 'node:fs/promises'
 import { join } from 'node:path'
 import { promisify } from 'node:util'
@@ -39,16 +40,17 @@ export class ScheduleService {
 
       // 支持自定义备份命令（如本机无 pg_dump 时用 docker exec 调用容器内的）
       const customCmd = this.configService.get<string>('BACKUP_CMD')
-      const cmd = customCmd
-        ? customCmd.replace('{filepath}', filepath)
-        : (() => {
-            const databaseUrl = this.configService.get<string>('DATABASE_URL')
-            if (!databaseUrl) {
-              throw new Error('DATABASE_URL 未配置')
-            }
-            return `pg_dump "${databaseUrl}" > "${filepath}"`
-          })()
-      await execAsync(cmd)
+      if (customCmd) {
+        // 自定义命令保留 exec（可能含 shell 语法如管道、变量）
+        await execAsync(customCmd.replace('{filepath}', filepath))
+      } else {
+        const databaseUrl = this.configService.get<string>('DATABASE_URL')
+        if (!databaseUrl) {
+          throw new Error('DATABASE_URL 未配置')
+        }
+        // pg_dump 用 spawn 参数数组，避免 shell 注入
+        await this.spawnPgDump(databaseUrl, filepath)
+      }
 
       const stats = await stat(filepath)
       this.logger.log(`数据库备份成功: ${filename} (${(stats.size / 1024).toFixed(2)} KB)`)
@@ -86,6 +88,23 @@ export class ScheduleService {
         )
       }
     }
+  }
+
+  /**
+   * 用 spawn 调用 pg_dump，参数数组形式避免 shell 注入
+   */
+  private spawnPgDump(databaseUrl: string, filepath: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const child = spawn('pg_dump', [databaseUrl], { stdio: ['ignore', 'pipe', 'pipe'] })
+      const stream = createWriteStream(filepath)
+      child.stdout.pipe(stream)
+      child.on('error', reject)
+      child.on('close', (code) => {
+        if (code === 0) resolve()
+        else reject(new Error(`pg_dump 退出码 ${code}`))
+      })
+      stream.on('error', reject)
+    })
   }
 
   /**

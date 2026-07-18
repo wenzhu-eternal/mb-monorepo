@@ -29,6 +29,15 @@ export class HttpExceptionFilter implements ExceptionFilter {
       status = exception.getStatus()
       const exceptionResponse = exception.getResponse()
 
+      // nestjs-zod 的 ZodSerializationException/ZodValidationException 会把 ZodError 挂在 error 上
+      // HttpExceptionFilter 默认只读 response.message，丢失 issues，这里补打便于排障
+      const zodError = (exception as { getZodError?: () => unknown }).getZodError?.()
+      if (zodError && typeof zodError === 'object' && 'issues' in zodError) {
+        this.logger.error(
+          `[Zod] issues: ${JSON.stringify((zodError as { issues: unknown }).issues)}`,
+        )
+      }
+
       if (typeof exceptionResponse === 'string') {
         message = exceptionResponse
       } else if (typeof exceptionResponse === 'object' && exceptionResponse !== null) {

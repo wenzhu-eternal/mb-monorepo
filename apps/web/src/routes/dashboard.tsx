@@ -3,10 +3,12 @@ import { Card, Col, message, Row, Spin, Typography } from 'antd'
 import { useEffect } from 'react'
 import { useDashboardStats } from '@/hooks/use-dashboard'
 import { AuthenticatedLayout } from '@/layouts/authenticated-layout'
+import { requireAuth } from '@/lib/route-guards'
 
 const { Title } = Typography
 
 export const Route = createFileRoute('/dashboard')({
+  beforeLoad: requireAuth(),
   component: DashboardPage,
 })
 

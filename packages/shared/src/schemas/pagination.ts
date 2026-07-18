@@ -1,22 +1,21 @@
 import { z } from 'zod'
 
-export const PaginationQuerySchema = z.object({
-  page: z.number().int().positive().default(1),
-  pageSize: z.number().int().positive().max(100).default(10),
-  sort: z.string().optional(),
-  order: z.enum(['asc', 'desc']).default('desc'),
-})
-
 export const PaginatedResponseSchema = <T extends z.ZodTypeAny>(itemSchema: T) =>
   z.object({
     list: z.array(itemSchema),
-    total: z.number().int().positive(),
+    // total/totalPages 允许 0：空表时返回 0，positive() 会误报 500
+    total: z.number().int().min(0),
     page: z.number().int().positive(),
     pageSize: z.number().int().positive(),
-    totalPages: z.number().int().positive(),
+    totalPages: z.number().int().min(0),
   })
 
-export type PaginationQuery = z.infer<typeof PaginationQuerySchema>
+export type PaginationQuery = {
+  page: number
+  pageSize: number
+  sort?: string
+  order: 'asc' | 'desc'
+}
 export type PaginatedResponse<T> = {
   list: T[]
   total: number

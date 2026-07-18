@@ -23,5 +23,3 @@ export const WechatQrCodeSchema = z.object({
 })
 
 export type WechatLoginType = z.infer<typeof WechatLoginTypeSchema>
-export type WechatLogin = z.infer<typeof WechatLoginSchema>
-export type WechatQrCode = z.infer<typeof WechatQrCodeSchema>

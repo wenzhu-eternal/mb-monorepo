@@ -5,6 +5,7 @@ import { Injectable, Logger } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import Handlebars from 'handlebars'
 import { createTransport, type SendMailOptions, type Transporter } from 'nodemailer'
+import { getEnv } from '@/config'
 
 type Attachment = NonNullable<SendMailOptions['attachments']>[number]
 
@@ -13,6 +14,7 @@ export class MailService {
   private readonly logger = new Logger(MailService.name)
   private transporter: Transporter | null = null
   private fromAddress: string
+  private appName: string
   private templates: Map<string, HandlebarsTemplateDelegate> = new Map()
 
   constructor(private readonly configService: ConfigService) {
@@ -22,6 +24,7 @@ export class MailService {
     const user = this.configService.get<string>('MAIL_USER')
     const password = this.configService.get<string>('MAIL_PASSWORD')
     this.fromAddress = this.configService.get<string>('MAIL_FROM') ?? user ?? ''
+    this.appName = getEnv().APP_NAME
 
     if (host && port && user && password) {
       this.transporter = createTransport({
@@ -61,12 +64,16 @@ export class MailService {
   async sendWelcome(to: string, username: string): Promise<void> {
     const template = this.templates.get('welcome')
     if (template) {
-      await this.sendHtml(to, '欢迎注册 MonoForge', template({ name: username }))
+      await this.sendHtml(
+        to,
+        `欢迎注册 ${this.appName}`,
+        template({ name: username, appName: this.appName }),
+      )
     } else {
       await this.send(
         to,
-        '欢迎注册 MonoForge',
-        `你好，${username}！欢迎注册 MonoForge 系统管理后台。`,
+        `欢迎注册 ${this.appName}`,
+        `你好，${username}！欢迎注册 ${this.appName} 系统管理后台。`,
       )
     }
   }
@@ -81,13 +88,18 @@ export class MailService {
     if (template) {
       await this.sendHtml(
         to,
-        '【MonoForge】验证码',
-        template({ name: name ?? '用户', code: finalCode, expireMinutes: 5 }),
+        `【${this.appName}】验证码`,
+        template({
+          name: name ?? '用户',
+          appName: this.appName,
+          code: finalCode,
+          expireMinutes: 5,
+        }),
       )
     } else {
       await this.send(
         to,
-        '【MonoForge】验证码',
+        `【${this.appName}】验证码`,
         `你的验证码是: ${finalCode}\n\n验证码 5 分钟内有效，请勿泄露给他人。`,
       )
     }
@@ -102,11 +114,14 @@ export class MailService {
     backupDate?: string,
     filepath?: string,
   ): Promise<void> {
-    const subject = success ? '【MonoForge】数据库备份成功' : '【MonoForge】数据库备份失败'
+    const subject = success
+      ? `【${this.appName}】数据库备份成功`
+      : `【${this.appName}】数据库备份失败`
     const template = this.templates.get('backup')
     const html = template
       ? template({
           name: '管理员',
+          appName: this.appName,
           backupDate: backupDate ?? new Date().toLocaleDateString('zh-CN'),
         })
       : undefined

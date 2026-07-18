@@ -1,10 +1,7 @@
 import { appendFileSync, mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 
-/**
- * 日轮转文件日志: 每天一个文件 logs/error-YYYY-MM-DD.log
- * 作为 DB 错误日志的兜底，DB 抖动时不丢日志
- */
+/** 日轮转文件日志（DB 错误日志的兜底） */
 const LOG_DIR = join(process.cwd(), 'logs')
 
 function getTodayLogPath(): string {
@@ -20,10 +17,7 @@ function ensureLogDir(): void {
   }
 }
 
-/**
- * 写入错误日志到文件（追加模式，不阻塞主流程的异常处理）
- * 格式: [ISO时间] [级别] 消息\n 堆栈\n
- */
+/** 写入错误日志到文件 */
 export function appendErrorLog(message: string, stack?: string): void {
   try {
     ensureLogDir()

@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { Button, Form, Input, message, Tabs, Typography } from 'antd'
 import { useState } from 'react'
+import { APP_NAME } from '@/config/brand'
 import { useLogin } from '@/hooks/use-auth'
 import { useRegister, useSendRegisterCode } from '@/hooks/use-register'
 import { extractErrorMessage } from '@/lib/error'
@@ -93,7 +94,7 @@ function LoginPage() {
       {contextHolder}
       <div className="w-full max-w-md p-8 bg-white rounded-lg shadow-md">
         <Title level={2} className="text-center mb-8">
-          MonoForge 管理后台
+          {APP_NAME} 管理后台
         </Title>
         <Tabs
           activeKey={activeTab}

@@ -4,10 +4,12 @@ import { useState } from 'react'
 import { useSendVerificationCodeMail, useSendWelcomeMail } from '@/hooks/use-mail'
 import { AuthenticatedLayout } from '@/layouts/authenticated-layout'
 import { extractErrorMessage } from '@/lib/error'
+import { requireAuth } from '@/lib/route-guards'
 
 const { Title, Text } = Typography
 
 export const Route = createFileRoute('/mail')({
+  beforeLoad: requireAuth(),
   component: MailPage,
 })
 

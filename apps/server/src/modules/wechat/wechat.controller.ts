@@ -10,7 +10,9 @@ import {
 } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { ApiOperation, ApiTags } from '@nestjs/swagger'
+import { WechatQrCodeSchema } from '@shared/schemas/wechat'
 import type { Response } from 'express'
+import { ZodSerializerDto } from 'nestjs-zod'
 import { Public } from '@/common/decorators/public.decorator'
 import { getRefreshTokenCookieOptions } from '@/common/utils/cookie-options'
 import { WechatLoginDto } from './dto/wechat-login.dto'
@@ -27,6 +29,7 @@ export class WechatController {
 
   @Get('qrcode')
   @ApiOperation({ summary: '获取微信扫码登录二维码 URL' })
+  @ZodSerializerDto(WechatQrCodeSchema)
   async getQrCode() {
     if (!this.wechatService.isEnabled()) {
       throw new ServiceUnavailableException('微信登录未启用，请配置 WEAPP_APPID 与 WEAPP_SECRET')

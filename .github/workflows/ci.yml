@@ -31,6 +31,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter=server exec tsc --noEmit
       - run: pnpm --filter=web exec tsc --noEmit
+      - run: pnpm --filter=@monoforge/e2e exec tsc --noEmit
 
   security:
     runs-on: ubuntu-latest
@@ -44,7 +45,21 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: bash scripts/security-check.sh
 
-  test:
+  # 单元测试：Mock DB，快速验证 service/controller 逻辑
+  unit-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test
+
+  # API 冒烟测试：真实 DB，验证后端全量 API 可用性
+  smoke-test:
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -63,6 +78,7 @@ jobs:
       REDIS_URL: redis://localhost:6379
       JWT_SECRET: ci-jwt-secret-must-be-at-least-32-chars-long-xyz
       JWT_REFRESH_SECRET: ci-jwt-refresh-secret-must-be-at-least-32-chars-long-xyz
+      NODE_ENV: test
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v2
@@ -71,11 +87,51 @@ jobs:
           node-version: 20
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm test
+      - run: pnpm --filter=server db:migrate
+      - run: pnpm --filter=server db:seed
+      - run: pnpm --filter=server test:e2e:ci
+
+  # Playwright 全链路 e2e：真实 DB + 浏览器，验证前端 UI + 后端 API 全链路
+  e2e-test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: test_db
+        ports: ['5432:5432']
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+      redis:
+        image: redis:7
+        ports: ['6379:6379']
+    env:
+      DATABASE_URL: postgresql://test:test@localhost:5432/test_db
+      REDIS_URL: redis://localhost:6379
+      JWT_SECRET: ci-jwt-secret-must-be-at-least-32-chars-long-xyz
+      JWT_REFRESH_SECRET: ci-jwt-refresh-secret-must-be-at-least-32-chars-long-xyz
+      NODE_ENV: development
+      # e2e 期间调高限流，避免频繁登录触发 429
+      THROTTLE_TTL: 60
+      THROTTLE_LIMIT: 1000
+      CI: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm --filter=server db:migrate
+      - run: pnpm --filter=server db:seed
+      - run: pnpm test:e2e
 
   build:
     runs-on: ubuntu-latest
-    needs: [lint, typecheck, security, test]
+    needs: [lint, typecheck, security, unit-test, smoke-test, e2e-test]
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v2

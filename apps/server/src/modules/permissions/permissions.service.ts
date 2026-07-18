@@ -137,7 +137,6 @@ export class PermissionsService {
       throw new ConflictException(`该权限仍被 ${count} 个角色引用，无法删除`)
     }
 
-    // 软删除: 设置 deletedAt 时间戳
     await db.update(permissions).set({ deletedAt: new Date() }).where(eq(permissions.id, id))
 
     return { message: `权限 ID ${id} 已删除` }

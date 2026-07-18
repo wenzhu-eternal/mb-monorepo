@@ -5,7 +5,8 @@
 | 层级 | 目的 | 速度 | 依赖 | 命令 |
 |---|---|---|---|---|
 | 单元测试（unit） | 验证 service/controller 单一函数逻辑 | 快（ms） | Mock DB/Redis | `pnpm test` |
-| E2E 冒烟测试（smoke） | 验证核心接口端到端可用 | 中（s） | 真实 DB | `pnpm --filter=server test:e2e` |
+| E2E 冒烟测试（smoke） | 验证后端**全量 16 模块 63 API 端点**端到端可用 | 中（s） | 真实 DB | `pnpm --filter=server test:e2e` |
+| 全链路 e2e（Playwright） | 验证前端 UI + 后端 API 全链路（含角色绑定/权限守卫/WebSocket） | 慢（s） | 真实 DB + 浏览器 | `pnpm test:e2e` |
 | 安全/规范检测 | 代码静态扫描 | 快（ms） | 无 | `pnpm security` |
 
 ## 单元测试
@@ -51,26 +52,33 @@ pnpm --filter=web test:cov
 
 ### 定位
 
-不是全量 e2e，而是**部署后快速验证核心功能可用**的冒烟用例。覆盖：
+**全量 API 冒烟**：覆盖后端 16 个模块的 63 个 API 端点，验证端到端可用。覆盖：
 
 1. **健康检查**：`/api/v1/health` 返回 200
-2. **认证**：login 成功返回 access_token，错误密码 401；`/auth/me` 返回当前用户
-3. **CRUD**：users/roles/permissions 的 list/create/delete 全流程
-4. **Zod 校验**：缺字段返回 400 + issues 字段
-5. **权限保护**：无 token 访问受保护接口返回 401
-6. **限流**：`@SkipThrottle()` 装饰的接口不被限流
+2. **认证**：login 成功返回 access_token，错误密码 401；`/auth/me` 返回当前用户；refresh/logout 全流程
+3. **CRUD 全量**：users/roles/permissions/files/audit-logs/error-logs 的 list/create/update/delete 全流程
+4. **Zod 校验**：缺字段返回 400 + issues 字段（与 main.ts 一致使用 `SanitizeBodyPipe + ZodValidationPipe + XssPipe`）
+5. **权限保护**：无 token 访问受保护接口返回 401；越权访问返回 403
+6. **角色-权限绑定**：GET/PUT `/role-permissions/role/:roleId`
+7. **路由元数据**：GET `/routes` 返回全部 controller 路由
+8. **系统初始化**：GET `/setup/status` + POST `/setup`
+9. **WebSocket**：POST `/websocket/notify`（含越权防护）
+10. **邮件/微信**：mail/welcome + wechat login（含未启用 503）
+11. **定时任务**：POST `/schedule/backup`
+
+> 共 70 个测试用例，文件位置：`apps/server/test/e2e/smoke.e2e-spec.ts`
 
 ### 运行
 
 ```bash
-# 启动测试数据库 + Redis
-docker compose up -d postgres redis
+# 启动 e2e 专用 DB + dev redis（e2e-postgres 独立容器，不污染 DEV DB）
+docker compose up -d e2e-postgres redis
 
-# 执行迁移
-pnpm db:migrate
-
-# 运行 e2e 冒烟
+# 运行 e2e 冒烟（自动 db:push+seed 到 e2e DB，再跑 vitest）
 pnpm --filter=server test:e2e
+
+# CI 环境用 test:e2e:ci（跳过 db:push+seed，由 workflow 单独执行）
+pnpm --filter=server test:e2e:ci
 ```
 
 ### 编写规范
@@ -111,6 +119,108 @@ describe('冒烟测试', () => {
 })
 ```
 
+## Playwright 全链路 e2e
+
+### 定位
+
+Playwright e2e 验证**前端 UI + 后端 API 全链路**，覆盖用户真实操作路径（点击、输入、跳转、WebSocket 通信等）。与 `apps/server/test/e2e/` 的 API 层冒烟测试互补：
+
+| 维度 | API 冒烟（supertest） | 全链路 e2e（Playwright） |
+|---|---|---|
+| 层级 | 后端 API | 前端 UI + 后端 API |
+| 覆盖 | 接口契约、权限、限流 | 用户路径、路由守卫、UI 交互、WebSocket |
+| 速度 | 中（秒级） | 慢（分钟级） |
+| 依赖 | 真实 DB | 真实 DB + 浏览器 |
+
+### 目录结构
+
+```
+apps/e2e/
+├── package.json              # @monoforge/e2e
+├── playwright.config.ts      # 配置 webServer 自动起 server+web
+├── global-setup.ts           # 启动前 seed 测试数据（admin 登录 + 创建 e2e-normal-user/e2e-target-user）
+├── global-teardown.ts        # 清理 e2e- 前缀数据（排除夹具账号 normalUser/targetUser）
+├── fixtures/                 # 测试夹具（账号、文件）
+├── helpers/                  # 辅助函数（API 客户端、浏览器登录、清理）
+└── tests/
+    ├── auth.spec.ts          # 认证链路（登录/登出/未登录跳转/token 持久化）
+    ├── dashboard.spec.ts     # Dashboard 统计显示
+    ├── files.spec.ts         # 文件上传 + 软删
+    ├── roles.spec.ts         # 角色 CRUD
+    ├── permissions.spec.ts   # 权限 CRUD + 路由配置
+    ├── role-permissions.spec.ts  # 角色-权限绑定链路 + 角色守卫（409/403）
+    ├── routes.spec.ts        # 路由守卫（requireAuth/requirePermission）
+    ├── users.spec.ts         # 用户管理 + 提权防护
+    ├── websocket.spec.ts     # WebSocket 通知越权
+    └── audit-logs.spec.ts    # 审计日志查看
+```
+
+### 端口与数据隔离
+
+- e2e postgres: **15432**（独立容器 `e2e-postgres`，与 DEV 5434 完全隔离，DEV DB 零污染）
+- e2e redis: **6381**（复用 dev）
+- e2e server: **9000**（复用 dev 端口，vite proxy 写死 9000）
+- e2e web: **3000**（复用 dev 端口，vite.config.ts + check-port.mjs 写死 3000）
+
+**约束**：e2e 跑时必须停 dev server + dev web（端口冲突）。
+**数据隔离**：e2e 用独立 DB（`monoforge_e2e_db`），DEV DB 完全不受影响。`playwright.config.ts` 的 `webServer.command` 启动前自动执行 `db:push && db:seed` 重置 e2e DB，确保每次跑都是干净状态。
+**多项目复用**：`e2e-postgres` 容器（端口 15432）所有项目共用，通过 database name 区分（`monoforge_e2e_db` / `travel_car_e2e_db` / `only_love_e2e_db`），端口永不冲突。
+
+### 运行
+
+```bash
+# 1. 启动 e2e 专用 DB + dev redis（e2e-postgres 独立容器，不污染 DEV DB）
+docker compose up -d e2e-postgres redis
+
+# 2. 跑全链路 e2e（webServer 自动 db:push+seed 到 e2e DB，再起 server+web，需停 dev server）
+pnpm test:e2e
+
+# 3. 查看 HTML 报告
+pnpm --filter=@monoforge/e2e test:report
+
+# 4. 重置 e2e DB（删数据卷重建，彻底清空）
+docker compose down -v e2e-postgres
+docker compose up -d e2e-postgres
+```
+
+> 注：`pnpm test:e2e` 走 `pnpm --filter=@monoforge/e2e test`，不经过 turbo，避免 server 历史遗留的 vitest-e2e 配置问题阻塞。
+
+### 编写规范
+
+- 文件位置：`apps/e2e/tests/*.spec.ts`
+- 用 Playwright 语义化定位器（`getByRole`、`getByPlaceholder`、`getByText`），避免 CSS 选择器
+- 每个测试独立，不依赖执行顺序（虽然 workers=1 串行执行）
+- 测试账号用 `e2e-` 前缀（`e2e-normal-user`、`e2e-target-user`、`e2e-temp-*`），便于 global-teardown 清理
+- 不删除 admin 账号和 seed 默认数据
+- 数据准备走 `helpers/api.ts` 的 `apiClient`，UI 操作走 `helpers/auth.ts`
+
+```ts
+import { expect, test } from '@playwright/test'
+import { loginAsAdmin } from '@e2e/helpers/auth'
+
+test('admin 查看用户列表', async ({ page }) => {
+  await loginAsAdmin(page)
+  await page.goto('/users')
+  await expect(page.getByText('用户管理', { exact: true })).toBeVisible()
+})
+```
+
+### CI 集成
+
+实际配置见 `.github/workflows/ci.yml`，共 6 个 job + 1 个聚合 build job：
+
+| Job | 内容 | 依赖 |
+|---|---|---|
+| `lint` | `pnpm lint`（Biome） | 无 |
+| `typecheck` | `tsc --noEmit`（server + web + e2e） | 无 |
+| `security` | `bash scripts/security-check.sh` | 无 |
+| `unit-test` | `pnpm test`（Mock DB，180+ 用例） | 无 |
+| `smoke-test` | `pnpm --filter=server test:e2e:ci`（真实 DB，70 用例） | postgres + redis services |
+| `e2e-test` | `pnpm test:e2e`（Playwright，65 用例） | postgres + redis services + playwright install |
+| `build` | `pnpm build` | 依赖前 6 个 job 全部通过 |
+
+**push 时 4 个测试链路必须全量通过**：unit-test + smoke-test + e2e-test + security。
+
 ## 安全与规范检测
 
 ### 自动化脚本
@@ -146,13 +256,10 @@ pnpm security   # 等价于 bash scripts/security-check.sh
 
 ## CI/CD 集成
 
-```yaml
-# .github/workflows/ci.yml（示例）
-jobs:
-  test:
-    steps:
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm security          # 安全+规范检测
-      - run: pnpm test              # 单元测试
-      - run: pnpm --filter=server test:e2e  # e2e 冒烟
-```
+实际 CI 配置见 `.github/workflows/ci.yml`，push 时触发 6 个并行 job（lint / typecheck / security / unit-test / smoke-test / e2e-test），全部通过后聚合 build job 执行 `pnpm build`。
+
+**4 个测试链路全量通过门槛**：
+- `unit-test`：`pnpm test`（后端 180+ + 前端 hooks 单测）
+- `smoke-test`：`pnpm --filter=server test:e2e:ci`（70 个 API 冒烟）
+- `e2e-test`：`pnpm test:e2e`（65 个 Playwright 全链路）
+- `security`：`bash scripts/security-check.sh`（lint + typecheck + 软删除审计 + 依赖安全扫描）

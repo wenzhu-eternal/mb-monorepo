@@ -18,6 +18,4 @@ export const RefreshTokenResponseSchema = z.object({
   accessToken: z.string(),
 })
 
-export type RefreshToken = z.infer<typeof RefreshTokenSchema>
 export type AuthResponse = z.infer<typeof AuthResponseSchema>
-export type RefreshTokenResponse = z.infer<typeof RefreshTokenResponseSchema>

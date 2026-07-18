@@ -36,7 +36,4 @@ export const RolePermissionSchema = z.object({
 })
 
 export type Permission = z.infer<typeof PermissionSchema>
-export type CreatePermission = z.infer<typeof CreatePermissionSchema>
-export type UpdatePermission = z.infer<typeof UpdatePermissionSchema>
-export type UpdateRolePermissions = z.infer<typeof UpdateRolePermissionsSchema>
 export type RolePermission = z.infer<typeof RolePermissionSchema>

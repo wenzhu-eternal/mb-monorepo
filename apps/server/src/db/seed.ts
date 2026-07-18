@@ -1,3 +1,4 @@
+import argon2 from 'argon2'
 import { config } from 'dotenv'
 import { eq } from 'drizzle-orm'
 import { db } from './index'
@@ -6,9 +7,8 @@ import { permissions, rolePermissions, roles, users } from './schema'
 // 显式加载根目录 .env，与 db/index.ts 保持一致，避免从 cwd 加载到错误文件
 config({ path: '../../.env' })
 
-// argon2 hash for password "888888"
-const ADMIN_PASSWORD_HASH =
-  '$argon2id$v=19$m=65536,t=3,p=4$+E4yDP+3tFn0YFmWgFZ43w$kFbMB7TU6sbsCmWlFARR3wPWFqwqr/Mwr3vOK1ONHbA'
+// admin 默认密码（首次登录后请立即修改）。新项目可通过环境变量 SEED_ADMIN_PASSWORD 覆盖
+const ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD ?? '888888'
 
 const defaultPermissions = [
   {
@@ -196,13 +196,18 @@ async function seed() {
   }
   console.log('Admin permissions assigned')
 
+  // admin 邮箱/昵称可通过环境变量覆盖，默认使用通用占位符（新项目接入时无需改源码）
+  const adminEmail = process.env.SEED_ADMIN_EMAIL ?? 'admin@example.com'
+  const adminNickname = process.env.SEED_ADMIN_NICKNAME ?? 'Administrator'
+  const passwordHash = await argon2.hash(ADMIN_PASSWORD)
+
   const [adminUser] = await db
     .insert(users)
     .values({
       username: 'admin',
-      email: 'travel_car@163.com',
-      password: ADMIN_PASSWORD_HASH,
-      nickname: '文竹',
+      email: adminEmail,
+      password: passwordHash,
+      nickname: adminNickname,
       roleId: role.id,
       status: true,
     })

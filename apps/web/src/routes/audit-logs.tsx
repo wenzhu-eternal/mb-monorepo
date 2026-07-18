@@ -34,7 +34,7 @@ function parseUserAgent(ua: string | null): { browser: string; os: string } {
   return { browser, os }
 }
 
-// 格式化新旧值，只显示变更的字段
+// 格式化值用于表格展示
 function formatValue(v: unknown): string {
   if (!v) return '-'
   if (typeof v === 'object') {

@@ -7,6 +7,8 @@ import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
   plugins: [TanStackRouterVite({ quoteStyle: 'single' }), react(), tailwindcss()],
+  // .env 在 monorepo 根目录，指定 envDir 让 Vite 正确加载并注入 index.html 的 %VITE_*%
+  envDir: resolve(__dirname, '../..'),
   resolve: {
     alias: {
       '@': resolve(__dirname, './src'),

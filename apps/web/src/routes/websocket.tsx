@@ -20,11 +20,13 @@ import dayjs from 'dayjs'
 import { useWebSocketDemo } from '@/hooks/use-websocket'
 import { AuthenticatedLayout } from '@/layouts/authenticated-layout'
 import { extractErrorMessage } from '@/lib/error'
+import { requireAuth } from '@/lib/route-guards'
 import { useAuthStore } from '@/store/auth-store'
 
 const { Title, Paragraph, Text } = Typography
 
 export const Route = createFileRoute('/websocket')({
+  beforeLoad: requireAuth(),
   component: WebSocketPage,
 })
 

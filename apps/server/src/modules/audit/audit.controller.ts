@@ -10,6 +10,9 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger'
 import { Throttle } from '@nestjs/throttler'
 import { PermissionCodes } from '@shared/constants/permissions'
+import { AuditLogSchema } from '@shared/schemas/audit'
+import { PaginatedResponseSchema } from '@shared/schemas/pagination'
+import { ZodSerializerDto } from 'nestjs-zod'
 import { Permissions } from '@/common/decorators/permissions.decorator'
 import { PermissionsGuard } from '@/common/guards/permissions.guard'
 import { AuditService } from './audit.service'
@@ -26,6 +29,7 @@ export class AuditController {
   @ApiOperation({ summary: '分页查询审计日志' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'pageSize', required: false, type: Number })
+  @ZodSerializerDto(PaginatedResponseSchema(AuditLogSchema))
   async findAll(@Query('page') page?: string, @Query('pageSize') pageSize?: string) {
     const pageNum = page ? Number.parseInt(page, 10) : 1
     const size = pageSize ? Number.parseInt(pageSize, 10) : 10
@@ -42,6 +46,7 @@ export class AuditController {
   @Throttle({ default: { limit: 60, ttl: 60000 } })
   @Permissions(PermissionCodes.AUDIT_VIEW)
   @ApiOperation({ summary: '按ID查询审计日志' })
+  @ZodSerializerDto(AuditLogSchema)
   async findOne(@Param('id', ParseIntPipe) id: number) {
     return this.auditService.findById(id)
   }

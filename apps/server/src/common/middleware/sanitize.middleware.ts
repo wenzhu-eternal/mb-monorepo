@@ -17,12 +17,7 @@ const SENSITIVE_FIELDS = [
 
 const MASK = '***REDACTED***'
 
-/**
- * 数据脱敏中间件: 克隆 body 并脱敏敏感字段后赋回 req.body
- * 用于日志记录场景（AuditInterceptor / HttpExceptionFilter），避免敏感信息落盘
- *
- * 实现方式: 将脱敏后的 body 存到 req.sanitizedBody，日志记录时取此字段
- */
+/** 数据脱敏中间件：将脱敏后的 body 存到 req.sanitizedBody，用于日志记录场景 */
 @Injectable()
 export class SanitizeMiddleware implements NestMiddleware {
   use(req: Request, res: Response, next: () => void) {

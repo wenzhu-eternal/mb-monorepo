@@ -54,7 +54,11 @@
       "!**/dist",
       "!**/build",
       "!**/coverage",
-      "!**/routeTree.gen.ts"
+      "!**/routeTree.gen.ts",
+      "!**/test-results",
+      "!**/playwright-report",
+      "!**/blob-report",
+      "!**/.last-run.json"
     ]
   }
 }

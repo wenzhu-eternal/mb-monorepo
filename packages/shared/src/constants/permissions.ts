@@ -17,6 +17,8 @@ export const PermissionCodes = {
   AUDIT_VIEW: 'audit:view',
   MAIL_SEND: 'mail:send',
   SCHEDULE_BACKUP: 'schedule:backup',
+  NOTIFICATION_VIEW: 'notification:view',
+  USER_ROLE_MANAGE: 'user:role_manage',
   ERROR_LOG_VIEW: 'error_log:view',
   ERROR_LOG_MANAGE: 'error_log:manage',
 } as const

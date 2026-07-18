@@ -11,9 +11,6 @@ export const CACHE_TTL_METADATA = 'cache:ttl'
  * @example
  * @Cacheable('user:id', 300)
  * async findById(id: number) { ... }
- *
- * @Cacheable('users:list', 60)
- * async findAll() { ... }
  */
 export const Cacheable = (key: string, ttl = 60): MethodDecorator => {
   return (target, propertyKey, descriptor) => {

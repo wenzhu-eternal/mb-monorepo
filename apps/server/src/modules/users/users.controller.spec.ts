@@ -1,5 +1,7 @@
-import { BadRequestException } from '@nestjs/common'
+import { BadRequestException, ForbiddenException } from '@nestjs/common'
+import { PermissionCodes } from '@shared/constants/permissions'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { TokenPayload } from '@/modules/auth/auth.service'
 import { UsersController } from './users.controller'
 import type { UsersService } from './users.service'
 
@@ -15,6 +17,7 @@ describe('UsersController', () => {
       create: vi.fn(),
       update: vi.fn(),
       remove: vi.fn(),
+      hasPermission: vi.fn(),
     } as unknown as UsersService
 
     controller = new UsersController(service)
@@ -108,14 +111,57 @@ describe('UsersController', () => {
   })
 
   describe('update', () => {
-    it('更新用户', async () => {
+    const currentUser = { sub: 1, username: 'admin', email: 'admin@test.com' } as TokenPayload
+
+    it('仅改资料（无 roleId/status）不触发 hasPermission', async () => {
       const dto = { nickname: '新昵称' }
       const mockUser = { id: 1, nickname: '新昵称' }
       vi.mocked(service.update).mockResolvedValue(mockUser as never)
 
-      const result = await controller.update(1, dto)
+      const result = await controller.update(1, dto, currentUser)
 
       expect(result).toEqual(mockUser)
+      expect(service.update).toHaveBeenCalledWith(1, dto)
+      expect(service.hasPermission).not.toHaveBeenCalled()
+    })
+
+    it('改 roleId 且有 USER_ROLE_MANAGE 权限 → 成功', async () => {
+      const dto = { roleId: 2 }
+      const mockUser = { id: 1, roleId: 2 }
+      vi.mocked(service.hasPermission).mockResolvedValue(true)
+      vi.mocked(service.update).mockResolvedValue(mockUser as never)
+
+      const result = await controller.update(1, dto, currentUser)
+
+      expect(result).toEqual(mockUser)
+      expect(service.hasPermission).toHaveBeenCalledWith(1, PermissionCodes.USER_ROLE_MANAGE)
+      expect(service.update).toHaveBeenCalledWith(1, dto)
+    })
+
+    it('改 roleId 但无 USER_ROLE_MANAGE 权限 → 抛 ForbiddenException（防提权）', async () => {
+      const dto = { roleId: 2 }
+      vi.mocked(service.hasPermission).mockResolvedValue(false)
+
+      await expect(controller.update(1, dto, currentUser)).rejects.toThrow(ForbiddenException)
+      expect(service.update).not.toHaveBeenCalled()
+    })
+
+    it('改 status 但无 USER_ROLE_MANAGE 权限 → 抛 ForbiddenException（防提权）', async () => {
+      const dto = { status: false }
+      vi.mocked(service.hasPermission).mockResolvedValue(false)
+
+      await expect(controller.update(1, dto, currentUser)).rejects.toThrow(ForbiddenException)
+      expect(service.update).not.toHaveBeenCalled()
+    })
+
+    it('改 status 且有 USER_ROLE_MANAGE 权限 → 成功', async () => {
+      const dto = { status: false }
+      vi.mocked(service.hasPermission).mockResolvedValue(true)
+      vi.mocked(service.update).mockResolvedValue({ id: 1, status: false } as never)
+
+      const result = await controller.update(1, dto, currentUser)
+
+      expect(result).toEqual({ id: 1, status: false })
       expect(service.update).toHaveBeenCalledWith(1, dto)
     })
   })

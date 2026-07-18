@@ -9,9 +9,6 @@ import { EventsService } from '@/modules/websocket/events.service'
 export class NotificationsService {
   constructor(private readonly eventsService: EventsService) {}
 
-  /**
-   * 拉取用户通知列表（默认最近 50 条，可选只看未读）
-   */
   async list(userId: number, unreadOnly = false) {
     const where = unreadOnly
       ? and(
@@ -99,7 +96,6 @@ export class NotificationsService {
     return { updated: result.length }
   }
 
-  // 软删除
   async remove(userId: number, id: number) {
     const [deleted] = await db
       .update(notifications)

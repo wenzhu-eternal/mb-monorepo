@@ -134,11 +134,14 @@ monoforge/
 ## 相关文档
 
 - [架构设计](./docs/ARCHITECTURE.md)
+- [部署规范](./docs/DEPLOYMENT.md)
 - [编码规范](./docs/CONVENTIONS.md)
 - [数据库规范](./docs/DATABASE.md)
 - [异常处理规范](./docs/ERROR-HANDLING.md)
 - [安全规范](./docs/SECURITY.md)
 - [配置规范](./docs/CONFIGURATION.md)
+- [测试规范](./docs/TESTING.md)
+- [编辑器配置](./docs/EDITOR-SETUP.md)
 - [antd v6 迁移指南](https://ant.design/docs/react/migration-v6/)
 - [Drizzle ORM 文档](https://orm.drizzle.team/docs)
 - [TanStack Router](https://tanstack.com/router/latest)

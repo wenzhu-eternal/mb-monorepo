@@ -1,6 +1,6 @@
-import { mkdir } from 'node:fs/promises'
+import { mkdir, rename } from 'node:fs/promises'
 import { join } from 'node:path'
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common'
+import { ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common'
 import type { FileItem, UploadResult } from '@shared/schemas/file'
 import type { PaginatedResponse } from '@shared/schemas/pagination'
 import { and, count, desc, eq } from 'drizzle-orm'
@@ -19,9 +19,12 @@ import { notDeleted } from '@/db/helpers'
 import { files, users } from '@/db/schema'
 
 const UPLOAD_DIR = join(process.cwd(), 'uploads')
+const TRASH_DIR = join(process.cwd(), 'uploads-trash')
 
 @Injectable()
 export class FilesService {
+  private readonly logger = new Logger(FilesService.name)
+
   async upload(file: Express.Multer.File, uploadedBy?: number): Promise<UploadResult> {
     if (!file) {
       throw new NotFoundException('文件未上传')
@@ -115,7 +118,7 @@ export class FilesService {
   }
 
   /**
-   * 删除文件: 仅管理员或上传者本人
+   * 删除文件: 仅管理员或上传者本人，磁盘文件移到隔离目录
    */
   async remove(id: number, currentUserId: number, isAdmin: boolean): Promise<{ message: string }> {
     const file = await db.query.files.findFirst({
@@ -129,10 +132,26 @@ export class FilesService {
       throw new ForbiddenException('无权删除他人上传的文件')
     }
 
-    // 不删除磁盘文件
+    // 磁盘文件移到隔离目录，静态托管不再服务，杜绝已删文件可访问
+    await this.moveToTrash(file.path, file.filename)
+
     await db.update(files).set({ deletedAt: new Date() }).where(eq(files.id, id))
 
     return { message: `文件 ID ${id} 已删除` }
+  }
+
+  private async moveToTrash(filePath: string, filename: string): Promise<void> {
+    try {
+      await mkdir(TRASH_DIR, { recursive: true })
+      // 隔离目录内用 时间戳+原名 避免冲突
+      const trashPath = join(TRASH_DIR, `${Date.now()}-${filename}`)
+      await rename(filePath, trashPath)
+    } catch (err) {
+      // 文件可能已被外部删除，不阻塞软删流程
+      this.logger.warn(
+        `磁盘文件移到隔离目录失败: ${err instanceof Error ? err.message : String(err)}`,
+      )
+    }
   }
 
   async ensureUploadDir(): Promise<void> {
