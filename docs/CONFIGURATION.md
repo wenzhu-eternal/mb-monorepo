@@ -11,9 +11,9 @@
 
 | 变量 | 说明 | 默认/示例 |
 |---|---|---|
-| `DATABASE_URL` | PostgreSQL 连接串（DEV） | `postgresql://monoforge_user:monoforge_password@localhost:5434/monoforge_database` |
-| `E2E_DATABASE_URL` | e2e 专用 PostgreSQL 连接串（独立容器，DEV DB 零污染） | `postgresql://e2e_user:e2e_password@localhost:15432/monoforge_e2e_db` |
-| `REDIS_URL` | Redis 连接串 | `redis://localhost:6381` |
+| `DATABASE_URL` | PostgreSQL 连接串（DEV） | `postgresql://monoforge_user:monoforge_password@localhost:5432/monoforge_database` |
+| `E2E_DATABASE_URL` | e2e 专用 PostgreSQL 连接串（独立容器，DEV DB 零污染） | `postgresql://e2e_user:e2e_password@localhost:5433/monoforge_e2e_db` |
+| `REDIS_URL` | Redis 连接串 | `redis://localhost:6379` |
 | `JWT_SECRET` | JWT access token 密钥 | 必填，长度 >= 32 |
 | `JWT_REFRESH_SECRET` | JWT refresh token 密钥 | 必填，长度 >= 32 |
 | `API_PORT` | 后端端口 | `9000` |
@@ -38,7 +38,7 @@
 | `MAIL_PASSWORD` | SMTP 授权码（非登录密码） | `your-smtp-auth-code` |
 | `MAIL_FROM` | 发件人地址 | `your-email@example.com` |
 
-> 注意：本项目用 `MAIL_PASSWORD`（不是 `MAIL_PASS`）。跨项目拷贝 `.env` 时注意对齐变量名。
+> 注意：本项目用 `MAIL_PASSWORD`（不是 `MAIL_PASS`）。
 
 ## 配置陷阱
 

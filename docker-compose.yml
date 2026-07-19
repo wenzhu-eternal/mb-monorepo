@@ -1,16 +1,16 @@
 services:
   # ============================================================
-  # 本地开发：独立容器，端口 5434/6381，与 travel-car(5432/6379) / only-love(5433/6380) 隔离
-  # 生产部署：docker compose up 启动独立 monoforge-postgres + monoforge-redis + app
+  # 本地开发：独立容器 mf-postgres(5432) + mf-redis(6379)
+  # 生产部署：docker compose up 启动独立 mf-postgres + mf-redis + app
   #   - ngrok 直接代理 app 的 9000 端口
   # ============================================================
 
   postgres:
     image: postgres:16-alpine
-    container_name: monoforge-postgres
+    container_name: mf-postgres
     restart: unless-stopped
     ports:
-      - '5434:5432'
+      - '5432:5432'
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-monoforge_user}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-monoforge_password}
@@ -25,10 +25,10 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: monoforge-redis
+    container_name: mf-redis
     restart: unless-stopped
     ports:
-      - '6381:6379'
+      - '6379:6379'
     command: redis-server --appendonly yes
     volumes:
       - redis_data:/data
@@ -39,17 +39,16 @@ services:
       retries: 5
 
   # ============================================================
-  # e2e 专用 postgres：端口 15432，独立数据卷，与 DEV(5434) 完全隔离
-  # 所有项目共用此容器，通过 database name 区分（monoforge_e2e_db / travel_car_e2e_db / ...）
+  # e2e 专用 postgres：端口 5433，独立数据卷，与 DEV(5432) 完全隔离
   # 启动：docker compose up -d e2e-postgres
   # 重置：docker compose down -v e2e-postgres（删数据卷）
   # ============================================================
   e2e-postgres:
     image: postgres:16-alpine
-    container_name: e2e-postgres
+    container_name: mf-e2e-postgres
     restart: unless-stopped
     ports:
-      - '15432:5432'
+      - '5433:5432'
     environment:
       POSTGRES_USER: ${E2E_POSTGRES_USER:-e2e_user}
       POSTGRES_PASSWORD: ${E2E_POSTGRES_PASSWORD:-e2e_password}
@@ -72,7 +71,7 @@ services:
         HTTPS_PROXY: ${BUILD_HTTP_PROXY:-}
         http_proxy: ${BUILD_HTTP_PROXY:-}
         https_proxy: ${BUILD_HTTP_PROXY:-}
-    container_name: monoforge-app
+    container_name: mf-app
     restart: unless-stopped
     ports:
       - '9000:9000'

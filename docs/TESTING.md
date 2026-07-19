@@ -157,14 +157,13 @@ apps/e2e/
 
 ### 端口与数据隔离
 
-- e2e postgres: **15432**（独立容器 `e2e-postgres`，与 DEV 5434 完全隔离，DEV DB 零污染）
-- e2e redis: **6381**（复用 dev）
+- e2e postgres: **5433**（独立容器 `mf-e2e-postgres`，与 DEV 5432 完全隔离，DEV DB 零污染）
+- e2e redis: **6379**（复用 dev）
 - e2e server: **9000**（复用 dev 端口，vite proxy 写死 9000）
 - e2e web: **3000**（复用 dev 端口，vite.config.ts + check-port.mjs 写死 3000）
 
 **约束**：e2e 跑时必须停 dev server + dev web（端口冲突）。
 **数据隔离**：e2e 用独立 DB（`monoforge_e2e_db`），DEV DB 完全不受影响。`playwright.config.ts` 的 `webServer.command` 启动前自动执行 `db:push && db:seed` 重置 e2e DB，确保每次跑都是干净状态。
-**多项目复用**：`e2e-postgres` 容器（端口 15432）所有项目共用，通过 database name 区分（`monoforge_e2e_db` / `travel_car_e2e_db` / `only_love_e2e_db`），端口永不冲突。
 
 ### 运行
 

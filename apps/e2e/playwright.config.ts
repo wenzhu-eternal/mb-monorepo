@@ -4,12 +4,12 @@ import { defineConfig, devices } from '@playwright/test'
  * MonoForge Playwright 全链路 e2e 配置
  *
  * 启动方式：
- *   1. docker compose up -d e2e-postgres redis  (e2e 专用 DB 15432 + dev redis 6381)
+ *   1. docker compose up -d e2e-postgres redis  (e2e 专用 DB 5433 + dev redis 6379)
  *   2. pnpm test:e2e                              (webServer 自动起 server+web，并自动 db:push+seed)
  *
  * 端口策略：
- *   - e2e postgres: 15432 (独立容器 e2e-postgres，与 DEV 5434 完全隔离，DEV DB 零污染)
- *   - redis:        6381  (复用 dev)
+ *   - e2e postgres: 5433  (独立容器 mf-e2e-postgres，与 DEV 5432 完全隔离，DEV DB 零污染)
+ *   - redis:        6379  (复用 dev)
  *   - server:       9000  (复用 dev 端口，vite proxy 写死 9000)
  *   - web:          3000  (复用 dev 端口，vite.config.ts + check-port.mjs 写死 3000)
  *
@@ -50,11 +50,11 @@ export default defineConfig({
       command:
         'pnpm --filter=server db:push && pnpm --filter=server db:seed && pnpm --filter=@monoforge/server dev',
       url: 'http://localhost:9000/api/v1/health',
-      // e2e 专用 DATABASE_URL 指向 15432 的 e2e-postgres，与 DEV DB(5434) 完全隔离
+      // e2e 专用 DATABASE_URL 指向 5433 的 mf-e2e-postgres，与 DEV DB(5432) 完全隔离
       // THROTTLE_LIMIT 调高避免 e2e 频繁登录触发 429（.env 可保持生产值 10）
       env: {
         NODE_ENV: 'development',
-        DATABASE_URL: 'postgresql://e2e_user:e2e_password@localhost:15432/monoforge_e2e_db',
+        DATABASE_URL: 'postgresql://e2e_user:e2e_password@localhost:5433/monoforge_e2e_db',
         THROTTLE_LIMIT: '1000',
       },
       timeout: 120_000,

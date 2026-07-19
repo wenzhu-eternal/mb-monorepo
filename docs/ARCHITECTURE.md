@@ -253,8 +253,8 @@ type CreateUser = z.infer<typeof CreateUserSchema>;
 
 | 服务 | 端口 | 说明 |
 |---|---|---|
-| postgres | 5434 | PostgreSQL 16（独立容器，与 travel-car 5432 / only-love 5433 隔离） |
-| redis | 6381 | Redis 7（独立容器，与 travel-car 6379 / only-love 6380 隔离） |
+| postgres | 5432 | PostgreSQL 16（独立容器 mf-postgres，monoforge 占最前位） |
+| redis | 6379 | Redis 7（独立容器 mf-redis，monoforge 占最前位） |
 | app | 9000 | NestJS 后端（含前端 dist，单一入口） |
 
 ### Dockerfile 策略

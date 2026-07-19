@@ -10,7 +10,7 @@
 
 set -e
 
-CONTAINER="monoforge-postgres"
+CONTAINER="mf-postgres"
 DB_USER="monoforge_user"
 DB_NAME="monoforge_database"
 BACKUP_DIR="apps/server/backups"

@@ -10,7 +10,7 @@
     "build": "turbo build",
     "lint": "turbo lint",
     "test": "turbo test",
-    "test:e2e": "pnpm --filter=@monoforge/e2e test",
+    "test:e2e": "pnpm --filter=@monoforge/e2e test:e2e",
     "format": "biome format --write .",
     "lint:fix": "biome check --write .",
     "prepare": "husky && pnpm --filter=@monoforge/shared build",

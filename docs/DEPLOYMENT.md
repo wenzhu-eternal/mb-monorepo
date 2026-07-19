@@ -126,8 +126,8 @@ docker compose down
 
 | 服务 | 端口 | 依赖 | 说明 |
 |---|---|---|---|
-| postgres | 5434 | - | PostgreSQL 16 |
-| redis | 6381 | - | Redis 7 |
+| postgres | 5432 | - | PostgreSQL 16 |
+| redis | 6379 | - | Redis 7 |
 | app | 9000 | postgres, redis | NestJS 后端（含前端 dist，单一入口） |
 
 > 生产环境建议：仅启动 postgres + redis 容器，server 直接 `node apps/server/dist/main` 运行（避免多层容器网络开销）。
